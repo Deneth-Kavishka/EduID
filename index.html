@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduID - Educational Identity Verification System</title>
+    <link rel="icon" type="image/svg+xml" href="assets/images/logo.svg" />
+    <link rel="stylesheet" href="assets/css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="landing-page">
+      <!-- Header/Navigation -->
+      <header class="landing-header">
+        <nav class="landing-nav">
+          <div class="logo-container">
+            <img src="assets/images/logo.svg" alt="EduID Logo" class="logo" />
+            <span class="brand-name">EduID</span>
+          </div>
+          <div class="nav-actions">
+            <button
+              class="theme-toggle"
+              id="themeToggle"
+              aria-label="Toggle theme"
+            >
+              <i class="fas fa-moon"></i>
+            </button>
+            <a href="auth/login.php" class="btn-signin">
+              <i class="fas fa-sign-in-alt"></i> Sign In
+            </a>
+          </div>
+        </nav>
+      </header>
+
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-content">
+          <h1>Secure & Smart Identity Verification</h1>
+          <p>
+            Modern biometric authentication system for educational institutions.
+            Verify student identity using QR codes and facial recognition for
+            exams, attendance, and campus access.
+          </p>
+          <div class="hero-buttons">
+            <a href="auth/login.php" class="btn btn-primary">
+              <i class="fas fa-rocket"></i> Get Started
+            </a>
+            <a href="#features" class="btn btn-outline">
+              <i class="fas fa-info-circle"></i> Learn More
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features Section -->
+      <section class="features-section" id="features">
+        <div class="container">
+          <h2 class="section-title">Powerful Features</h2>
+          <div class="features-grid">
+            <!-- Feature 1: Face Recognition -->
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-face-smile" style="color: #3b82f6"></i>
+              </div>
+              <h3>Face Recognition</h3>
+              <p>
+                Advanced AI-powered facial recognition ensures accurate student
+                identification in real-time with high security standards.
+              </p>
+            </div>
+
+            <!-- Feature 2: QR Code System -->
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-qrcode" style="color: #10b981"></i>
+              </div>
+              <h3>QR Code Generation</h3>
+              <p>
+                Unique QR codes for each student enable quick verification at
+                exam halls, events, and campus facilities.
+              </p>
+            </div>
+
+            <!-- Feature 3: Attendance Tracking -->
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-calendar-check" style="color: #f59e0b"></i>
+              </div>
+              <h3>Smart Attendance</h3>
+              <p>
+                Automated attendance tracking with real-time updates and
+                comprehensive reports for students, teachers, and parents.
+              </p>
+            </div>
+
+            <!-- Feature 4: Exam Hall Management -->
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-clipboard-list" style="color: #ef4444"></i>
+              </div>
+              <h3>Exam Management</h3>
+              <p>
+                Streamline exam entry procedures with instant identity
+                verification preventing impersonation and fraud.
+              </p>
+            </div>
+
+            <!-- Feature 5: Multi-Portal Access -->
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-users-gear" style="color: #7c3aed"></i>
+              </div>
+              <h3>Multi-User Portals</h3>
+              <p>
+                Dedicated portals for admins, students, teachers, and parents
+                with role-based access and features.
+              </p>
+            </div>
+
+            <!-- Feature 6: Real-time Analytics -->
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-chart-line" style="color: #06b6d4"></i>
+              </div>
+              <h3>Analytics & Reports</h3>
+              <p>
+                Comprehensive dashboards with insights, trends, and detailed
+                reports for data-driven decision making.
+              </p>
+            </div>
+
+            <!-- Feature 7: Event Management -->
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-calendar-days" style="color: #ec4899"></i>
+              </div>
+              <h3>Event Control</h3>
+              <p>
+                Manage campus events with registration tracking and automated
+                check-in for better crowd control.
+              </p>
+            </div>
+
+            <!-- Feature 8: Security -->
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-shield-halved" style="color: #8b5cf6"></i>
+              </div>
+              <h3>Enhanced Security</h3>
+              <p>
+                Bank-level encryption, secure data storage, and audit trails
+                ensure maximum protection of sensitive information.
+              </p>
+            </div>
+
+            <!-- Feature 9: Dark Mode -->
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-moon" style="color: #64748b"></i>
+              </div>
+              <h3>Light & Dark Mode</h3>
+              <p>
+                Comfortable viewing experience with seamless theme switching for
+                day and night usage.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Benefits Section -->
+      <section class="features-section" style="background: var(--bg-secondary)">
+        <div class="container">
+          <h2 class="section-title">Why Choose EduID?</h2>
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-rocket" style="color: #3b82f6"></i>
+              </div>
+              <h3>Fast & Efficient</h3>
+              <p>
+                Reduce verification time by 80% with instant biometric
+                authentication and QR scanning.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-lock" style="color: #10b981"></i>
+              </div>
+              <h3>Prevent Fraud</h3>
+              <p>
+                Eliminate fake IDs and impersonation with dual-layer
+                verification system.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-mobile-screen" style="color: #f59e0b"></i>
+              </div>
+              <h3>Easy to Use</h3>
+              <p>
+                Intuitive interface designed for quick adoption by all users
+                without technical training.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats Section -->
+      <section class="features-section">
+        <div class="container">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon primary">
+                <i class="fas fa-clock"></i>
+              </div>
+              <div class="stat-details">
+                <h3>< 2 Sec</h3>
+                <p>Average verification time</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon success">
+                <i class="fas fa-percentage"></i>
+              </div>
+              <div class="stat-details">
+                <h3>99.9%</h3>
+                <p>Accuracy rate</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon warning">
+                <i class="fas fa-shield-halved"></i>
+              </div>
+              <div class="stat-details">
+                <h3>100%</h3>
+                <p>Secure & Encrypted</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon danger">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="stat-details">
+                <h3>Unlimited</h3>
+                <p>User capacity</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Section -->
+      <section class="hero-section" style="padding: 4rem 2rem">
+        <div class="hero-content">
+          <h2 style="font-size: 2.5rem; margin-bottom: 1rem">
+            Ready to Transform Your Institution?
+          </h2>
+          <p style="margin-bottom: 2rem">
+            Join modern educational institutions using EduID for secure identity
+            management
+          </p>
+          <a
+            href="auth/login.php"
+            class="btn btn-primary"
+            style="font-size: 1.2rem"
+          >
+            <i class="fas fa-arrow-right"></i> Start Now
+          </a>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer
+        style="
+          background: rgba(0, 0, 0, 0.2);
+          color: white;
+          text-align: center;
+          padding: 2rem;
+        "
+      >
+        <p>
+          &copy; 2026 EduID - Educational Identity Verification System. All
+          rights reserved.
+        </p>
+        <p style="margin-top: 0.5rem; opacity: 0.8">
+          Powered by Advanced Biometric Technology
+        </p>
+      </footer>
+    </div>
+
+    <script src="assets/js/theme.js"></script>
+  </body>
+</html>
