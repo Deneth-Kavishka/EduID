@@ -1,0 +1,111 @@
+# ===================
+# EduID Project .gitignore
+# ===================
+
+# ===================
+# Environment & Config
+# ===================
+.env
+.env.local
+.env.*.local
+config/config.local.php
+
+# ===================
+# Uploads & User Data
+# ===================
+uploads/face_data/*
+uploads/profiles/*
+uploads/qr_codes/*
+!uploads/face_data/.gitkeep
+!uploads/profiles/.gitkeep
+!uploads/qr_codes/.gitkeep
+
+# ===================
+# Dependencies
+# ===================
+/vendor/
+/node_modules/
+composer.lock
+package-lock.json
+
+# ===================
+# IDE & Editors
+# ===================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# ===================
+# OS Generated Files
+# ===================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ===================
+# Logs & Debug
+# ===================
+*.log
+logs/
+error_log
+debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===================
+# Cache & Temp Files
+# ===================
+*.cache
+.cache/
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ===================
+# Build & Compiled
+# ===================
+/dist/
+/build/
+*.min.js
+*.min.css
+
+# ===================
+# Database
+# ===================
+*.sql.bak
+*.sqlite
+*.db
+
+# ===================
+# PHP Specific
+# ===================
+*.phar
+.php_cs
+.php_cs.cache
+.phpunit.result.cache
+phpunit.xml
+
+# ===================
+# Security - Never commit these
+# ===================
+*.pem
+*.key
+*.crt
+*.p12
+secrets.json
+credentials.json
