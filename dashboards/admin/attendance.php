@@ -14,16 +14,31 @@ $selected_date = $_GET['date'] ?? $today;
 $selected_grade = $_GET['grade'] ?? '';
 $selected_section = $_GET['section'] ?? '';
 
-// Get unique grades
-$query = "SELECT DISTINCT grade FROM students ORDER BY grade";
+// Check if selected date is a holiday
+$query = "SELECT * FROM institute_holidays WHERE holiday_date = :date";
+$stmt = $conn->prepare($query);
+$stmt->bindParam(':date', $selected_date);
+$stmt->execute();
+$holiday_info = $stmt->fetch(PDO::FETCH_ASSOC);
+$is_holiday = $holiday_info ? true : false;
+
+// Get unique grades (sorted numerically)
+$query = "SELECT DISTINCT grade FROM students WHERE grade IS NOT NULL AND grade != '' ORDER BY CAST(grade AS UNSIGNED), grade";
 $stmt = $conn->prepare($query);
 $stmt->execute();
 $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Get unique sections for selected grade
+// Get unique sections for selected grade (only sections that have students)
 $sections = [];
 if ($selected_grade) {
-    $query = "SELECT DISTINCT class_section FROM students WHERE grade = :grade ORDER BY class_section";
+    $query = "SELECT DISTINCT s.class_section 
+              FROM students s 
+              JOIN users u ON s.user_id = u.user_id 
+              WHERE s.grade = :grade 
+              AND s.class_section IS NOT NULL 
+              AND s.class_section != ''
+              AND u.status = 'active'
+              ORDER BY s.class_section";
     $stmt = $conn->prepare($query);
     $stmt->bindParam(':grade', $selected_grade);
     $stmt->execute();
@@ -51,7 +66,7 @@ $query = "SELECT a.*, s.student_number, s.first_name, s.last_name, s.grade, s.cl
           JOIN students s ON a.student_id = s.student_id
           JOIN users u ON s.user_id = u.user_id
           WHERE {$where_clause}
-          ORDER BY s.grade, s.class_section, s.student_number";
+          ORDER BY CAST(s.grade AS UNSIGNED), s.grade, s.class_section, s.student_number";
 $stmt = $conn->prepare($query);
 foreach ($params as $key => $value) {
     $stmt->bindValue($key, $value);
@@ -156,7 +171,7 @@ $query = "SELECT s.student_id, s.student_number, s.first_name, s.last_name, s.gr
           FROM students s
           JOIN users u ON s.user_id = u.user_id
           WHERE {$unmarked_where_clause}
-          ORDER BY s.grade, s.class_section, s.student_number";
+          ORDER BY CAST(s.grade AS UNSIGNED), s.grade, s.class_section, s.student_number";
 $stmt = $conn->prepare($query);
 foreach ($unmarked_params as $key => $value) {
     $stmt->bindValue($key, $value);
@@ -311,11 +326,16 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <!-- Grade/Section Selection -->
                 <div class="card" style="margin-bottom: 1.5rem;">
                     <div class="card-body" style="padding: 1.5rem;">
-                        <h3 style="color: var(--text-primary); margin-bottom: 1rem;"><i class="fas fa-filter"></i> Select Class</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="color: var(--text-primary); margin: 0;"><i class="fas fa-filter"></i> Select Class & Date</h3>
+                            <button class="btn" style="background: rgba(168, 85, 247, 0.1); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); padding: 0.4rem 0.75rem; font-size: 0.75rem;" onclick="showHolidayModal()">
+                                <i class="fas fa-calendar-times"></i> Mark Closed
+                            </button>
+                        </div>
                         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; align-items: end;">
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 600; font-size: 0.875rem;">Date</label>
-                                <input type="date" id="dateFilter" value="<?php echo $selected_date; ?>" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);">
+                                <input type="date" id="dateFilter" value="<?php echo $selected_date; ?>" max="<?php echo $today; ?>" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);">
                             </div>
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 600; font-size: 0.875rem;">Grade</label>
@@ -341,10 +361,42 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </button>
                             </div>
                         </div>
+                        <?php if ($selected_date !== $today): ?>
+                        <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="fas fa-history" style="color: #f59e0b;"></i>
+                            <span style="color: var(--text-primary); font-size: 0.9rem;">
+                                <strong>Past Date:</strong> You are viewing/marking attendance for <strong><?php echo date('F d, Y', strtotime($selected_date)); ?></strong>
+                            </span>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
-                <?php if ($selected_grade): ?>
+                <?php if ($is_holiday): ?>
+                <!-- Holiday Notice -->
+                <div class="card" style="margin-bottom: 1.5rem; border: 2px solid #ef4444;">
+                    <div class="card-body" style="padding: 2rem; text-align: center; background: rgba(239, 68, 68, 0.05);">
+                        <i class="fas fa-building-circle-xmark" style="font-size: 3rem; color: #ef4444; margin-bottom: 1rem;"></i>
+                        <h3 style="color: #ef4444; margin-bottom: 0.5rem;">Institute Closed</h3>
+                        <p style="color: var(--text-primary); font-size: 1.1rem; margin-bottom: 0.5rem;">
+                            <strong><?php echo date('l, F d, Y', strtotime($selected_date)); ?></strong>
+                        </p>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            <span class="holiday-type-badge" style="display: inline-block; padding: 0.25rem 0.75rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">
+                                <?php echo str_replace('_', ' ', $holiday_info['holiday_type']); ?>
+                            </span>
+                        </p>
+                        <p style="color: var(--text-primary); font-size: 1rem;">
+                            <i class="fas fa-quote-left" style="color: var(--text-secondary); margin-right: 0.5rem;"></i>
+                            <?php echo htmlspecialchars($holiday_info['reason']); ?>
+                            <i class="fas fa-quote-right" style="color: var(--text-secondary); margin-left: 0.5rem;"></i>
+                        </p>
+                        <button class="btn" style="margin-top: 1.5rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid #ef4444;" onclick="removeHoliday(<?php echo $holiday_info['holiday_id']; ?>)">
+                            <i class="fas fa-trash"></i> Remove Holiday & Enable Attendance
+                        </button>
+                    </div>
+                </div>
+                <?php elseif ($selected_grade): ?>
                 <!-- Stats Overview -->
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -443,18 +495,18 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <table id="attendanceTable" style="width: 100%; table-layout: fixed;">
                             <colgroup>
                                 <col style="width: 10%;">
-                                <col style="width: 25%;">
+                                <col style="width: 22%;">
+                                <col style="width: 13%;">
                                 <col style="width: 12%;">
                                 <col style="width: 12%;">
                                 <col style="width: 12%;">
-                                <col style="width: 12%;">
-                                <col style="width: 17%;">
+                                <col style="width: 19%;">
                             </colgroup>
                             <thead>
                                 <tr>
                                     <th>Student #</th>
                                     <th>Name</th>
-                                    <th>Section</th>
+                                    <th>Class</th>
                                     <th>Time</th>
                                     <th>Method</th>
                                     <th>Status</th>
@@ -479,7 +531,7 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 </div>
                                             </td>
                                             <td>
-                                                <span style="font-size: 0.875rem; color: var(--text-primary);"><?php echo htmlspecialchars($record['class_section']); ?></span>
+                                                <span style="display: inline-block; padding: 0.25rem 0.5rem; background: rgba(37, 99, 235, 0.1); color: var(--primary-color); border-radius: 4px; font-size: 0.8rem; font-weight: 600;"><?php echo htmlspecialchars($record['grade'] . '-' . $record['class_section']); ?></span>
                                             </td>
                                             <td>
                                                 <div style="font-size: 0.875rem; color: var(--text-secondary);">
@@ -549,56 +601,124 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </main>
     </div>
     
-    <!-- Mark Attendance Modal -->
-    <div id="markAttendanceModal" class="modal">
-        <div class="modal-content" style="max-width: 900px;">
-            <div class="modal-header">
-                <h2><i class="fas fa-check-double"></i> Mark Attendance - Grade <?php echo $selected_grade; ?><?php echo $selected_section ? " ({$selected_section})" : ''; ?></h2>
-                <span class="close" onclick="closeMarkAttendanceModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div style="margin-bottom: 1rem;">
-                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                        <button class="btn btn-sm" style="background: var(--success-color); color: white;" onclick="markAllAs('present')">
-                            <i class="fas fa-check"></i> Mark All Present
-                        </button>
-                        <button class="btn btn-sm" style="background: var(--danger-color); color: white;" onclick="markAllAs('absent')">
-                            <i class="fas fa-times"></i> Mark All Absent
-                        </button>
+    <!-- Holiday/Institute Closed Modal -->
+    <div id="holidayModal" class="modal">
+        <div class="modal-content attendance-modal" style="max-width: 550px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                <div class="modal-title-wrapper">
+                    <div class="modal-icon" style="background: rgba(255, 255, 255, 0.2);">
+                        <i class="fas fa-calendar-times"></i>
+                    </div>
+                    <div>
+                        <h2>Mark Day as Closed</h2>
+                        <p class="modal-subtitle">Institute will be closed on this day</p>
                     </div>
                 </div>
-                <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
-                    <table style="width: 100%;">
-                        <thead style="position: sticky; top: 0; background: var(--bg-primary);">
+                <button class="modal-close-btn" onclick="closeHolidayModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-primary); font-weight: 600;">Date</label>
+                    <input type="date" id="holidayDate" value="<?php echo $selected_date; ?>" max="<?php echo date('Y-m-d', strtotime('+1 year')); ?>" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-primary); font-weight: 600;">Type</label>
+                    <select id="holidayType" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 1rem;">
+                        <option value="public_holiday">Public Holiday</option>
+                        <option value="institute_holiday" selected>Institute Holiday</option>
+                        <option value="emergency">Emergency Closure</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-primary); font-weight: 600;">Reason</label>
+                    <textarea id="holidayReason" rows="3" placeholder="Enter the reason for closure..." style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 1rem; resize: vertical;"></textarea>
+                </div>
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                    <button class="footer-btn footer-btn-cancel" onclick="closeHolidayModal()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button class="footer-btn" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none;" onclick="saveHoliday()">
+                        <i class="fas fa-calendar-times"></i> Mark as Closed
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mark Attendance Modal -->
+    <div id="markAttendanceModal" class="modal">
+        <div class="modal-content attendance-modal">
+            <div class="modal-header">
+                <div class="modal-title-wrapper">
+                    <div class="modal-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div>
+                        <h2>Mark Attendance</h2>
+                        <p class="modal-subtitle">Grade <?php echo $selected_grade; ?><?php echo $selected_section ? " - Section {$selected_section}" : ''; ?> • <?php echo date('M d, Y', strtotime($selected_date)); ?></p>
+                    </div>
+                </div>
+                <button class="modal-close-btn" onclick="closeMarkAttendanceModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <span class="quick-actions-label">Quick Actions:</span>
+                    <button class="action-btn action-btn-success" onclick="markAllAs('present')">
+                        <i class="fas fa-check-circle"></i> All Present
+                    </button>
+                    <button class="action-btn action-btn-danger" onclick="markAllAs('absent')">
+                        <i class="fas fa-times-circle"></i> All Absent
+                    </button>
+                    <button class="action-btn action-btn-warning" onclick="markAllAs('late')">
+                        <i class="fas fa-clock"></i> All Late
+                    </button>
+                </div>
+                
+                <!-- Students List -->
+                <div class="students-list-container">
+                    <table class="attendance-table">
+                        <thead>
                             <tr>
-                                <th style="padding: 1rem; text-align: left;">Student</th>
-                                <th style="padding: 1rem; text-align: center; width: 200px;">Status</th>
+                                <th>Student</th>
+                                <th style="text-align: center; width: 280px;">Attendance Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($unmarked_students as $student): ?>
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <td style="padding: 0.75rem;">
-                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                        <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(37, 99, 235, 0.1); display: flex; align-items: center; justify-content: center; color: var(--primary-color); font-weight: 600;">
-                                            <?php echo strtoupper(substr($student['first_name'], 0, 1)); ?>
+                            <tr>
+                                <td>
+                                    <div class="student-info">
+                                        <div class="student-avatar">
+                                            <?php echo strtoupper(substr($student['first_name'], 0, 1) . substr($student['last_name'], 0, 1)); ?>
                                         </div>
-                                        <div>
-                                            <div style="font-weight: 600; color: var(--text-primary);"><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></div>
-                                            <div style="color: var(--text-secondary); font-size: 0.875rem;"><?php echo htmlspecialchars($student['student_number']); ?> | <?php echo htmlspecialchars($student['class_section']); ?></div>
+                                        <div class="student-details">
+                                            <div class="student-name"><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></div>
+                                            <div class="student-meta">
+                                                <span class="student-id"><?php echo htmlspecialchars($student['student_number']); ?></span>
+                                                <span class="student-class"><?php echo htmlspecialchars($student['grade'] . '-' . $student['class_section']); ?></span>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td style="padding: 0.75rem; text-align: center;">
-                                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                                        <button class="status-btn" data-student="<?php echo $student['student_id']; ?>" data-status="present" onclick="selectStatus(this)" style="padding: 0.5rem 1rem; border: 2px solid var(--success-color); background: transparent; color: var(--success-color); border-radius: 6px; cursor: pointer; font-weight: 600;">
-                                            <i class="fas fa-check"></i> P
+                                <td>
+                                    <div class="status-buttons">
+                                        <button class="status-btn status-present" data-student="<?php echo $student['student_id']; ?>" data-status="present" onclick="selectStatus(this)">
+                                            <i class="fas fa-check"></i>
+                                            <span>Present</span>
                                         </button>
-                                        <button class="status-btn" data-student="<?php echo $student['student_id']; ?>" data-status="absent" onclick="selectStatus(this)" style="padding: 0.5rem 1rem; border: 2px solid var(--danger-color); background: transparent; color: var(--danger-color); border-radius: 6px; cursor: pointer; font-weight: 600;">
-                                            <i class="fas fa-times"></i> A
+                                        <button class="status-btn status-absent" data-student="<?php echo $student['student_id']; ?>" data-status="absent" onclick="selectStatus(this)">
+                                            <i class="fas fa-times"></i>
+                                            <span>Absent</span>
                                         </button>
-                                        <button class="status-btn" data-student="<?php echo $student['student_id']; ?>" data-status="late" onclick="selectStatus(this)" style="padding: 0.5rem 1rem; border: 2px solid var(--warning-color); background: transparent; color: var(--warning-color); border-radius: 6px; cursor: pointer; font-weight: 600;">
-                                            <i class="fas fa-clock"></i> L
+                                        <button class="status-btn status-late" data-student="<?php echo $student['student_id']; ?>" data-status="late" onclick="selectStatus(this)">
+                                            <i class="fas fa-clock"></i>
+                                            <span>Late</span>
                                         </button>
                                     </div>
                                 </td>
@@ -607,19 +727,27 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </tbody>
                     </table>
                 </div>
-                <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-                    <button class="btn btn-outline" onclick="closeMarkAttendanceModal()" style="padding: 0.75rem 1.5rem;">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button class="btn btn-primary" onclick="submitAttendance()" style="padding: 0.75rem 1.5rem;">
-                        <i class="fas fa-save"></i> Save Attendance
-                    </button>
+                
+                <!-- Footer Actions -->
+                <div class="modal-footer">
+                    <div class="attendance-summary">
+                        <span id="summaryText">Select attendance status for each student</span>
+                    </div>
+                    <div class="footer-buttons">
+                        <button class="footer-btn footer-btn-cancel" onclick="closeMarkAttendanceModal()">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button class="footer-btn footer-btn-save" onclick="submitAttendance()">
+                            <i class="fas fa-save"></i> Save Attendance
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
     <style>
+        /* Modal Base Styles */
         .modal {
             display: none;
             position: fixed;
@@ -628,37 +756,421 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
             overflow-y: auto;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         
-        .modal-content {
-            background-color: var(--bg-primary);
-            margin: 2% auto;
-            padding: 0;
-            border-radius: var(--border-radius-lg);
-            max-width: 600px;
-            box-shadow: var(--shadow-lg);
+        .modal[style*="display: block"] {
+            opacity: 1;
         }
         
-        .modal-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--border-color);
+        /* Attendance Modal Specific */
+        .attendance-modal {
+            background: var(--bg-primary);
+            margin: 3% auto;
+            border-radius: 16px;
+            max-width: 900px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: modalSlideIn 0.3s ease-out;
+            overflow: hidden;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        /* Modal Header */
+        .attendance-modal .modal-header {
+            padding: 1.5rem 2rem;
+            background: linear-gradient(135deg, var(--primary-color), #6366f1);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: none;
         }
         
-        .modal-header h2 {
-            margin: 0;
-            color: var(--text-primary);
+        .modal-title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .modal-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
             font-size: 1.25rem;
         }
         
-        .modal-body {
-            padding: 1.5rem;
+        .attendance-modal .modal-header h2 {
+            margin: 0;
+            color: white;
+            font-size: 1.35rem;
+            font-weight: 700;
         }
         
+        .modal-subtitle {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        
+        .modal-close-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: rotate(90deg);
+        }
+        
+        /* Modal Body */
+        .attendance-modal .modal-body {
+            padding: 1.5rem 2rem 2rem;
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .quick-actions-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: transparent;
+        }
+        
+        .action-btn-success {
+            border: 2px solid #22c55e;
+            color: #22c55e;
+        }
+        .action-btn-success:hover {
+            background: #22c55e;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        
+        .action-btn-danger {
+            border: 2px solid #ef4444;
+            color: #ef4444;
+        }
+        .action-btn-danger:hover {
+            background: #ef4444;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .action-btn-warning {
+            border: 2px solid #f59e0b;
+            color: #f59e0b;
+        }
+        .action-btn-warning:hover {
+            background: #f59e0b;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+        
+        /* Students List */
+        .students-list-container {
+            max-height: 420px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-primary);
+        }
+        
+        .students-list-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .students-list-container::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 4px;
+        }
+        
+        .students-list-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        
+        .students-list-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+        
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .attendance-table thead {
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+            z-index: 10;
+        }
+        
+        .attendance-table th {
+            padding: 1rem 1.25rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .attendance-table tbody tr {
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.15s ease;
+        }
+        
+        .attendance-table tbody tr:last-child {
+            border-bottom: none;
+        }
+        
+        .attendance-table tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .attendance-table td {
+            padding: 0.875rem 1.25rem;
+        }
+        
+        /* Student Info */
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .student-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary-color), #6366f1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        .student-details {
+            flex: 1;
+        }
+        
+        .student-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+        
+        .student-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+        
+        .student-id {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+        
+        .student-class {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary-color);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        /* Status Buttons */
+        .status-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+        
+        .status-btn {
+            padding: 0.5rem 0.875rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: transparent;
+        }
+        
+        .status-btn i {
+            font-size: 0.75rem;
+        }
+        
+        .status-present {
+            border: 2px solid #22c55e;
+            color: #22c55e;
+        }
+        .status-present:hover {
+            background: rgba(34, 197, 94, 0.1);
+            transform: translateY(-1px);
+        }
+        .status-present.selected {
+            background: #22c55e !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+        }
+        
+        .status-absent {
+            border: 2px solid #ef4444;
+            color: #ef4444;
+        }
+        .status-absent:hover {
+            background: rgba(239, 68, 68, 0.1);
+            transform: translateY(-1px);
+        }
+        .status-absent.selected {
+            background: #ef4444 !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+        }
+        
+        .status-late {
+            border: 2px solid #f59e0b;
+            color: #f59e0b;
+        }
+        .status-late:hover {
+            background: rgba(245, 158, 11, 0.1);
+            transform: translateY(-1px);
+        }
+        .status-late.selected {
+            background: #f59e0b !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+        }
+        
+        /* Modal Footer */
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .attendance-summary {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .footer-buttons {
+            display: flex;
+            gap: 0.75rem;
+        }
+        
+        .footer-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .footer-btn-cancel {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        .footer-btn-cancel:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+        
+        .footer-btn-save {
+            background: linear-gradient(135deg, var(--primary-color), #6366f1);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        }
+        .footer-btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+        }
+        
+        /* Other Button Styles */
+        .btn-edit {
+            background: rgba(168, 85, 247, 0.1);
+            color: #a855f7;
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+        .btn-edit:hover {
+            background: rgba(168, 85, 247, 0.2);
+            border-color: #a855f7;
+        }
+        
+        /* Close button in general modals */
         .close {
             color: var(--text-secondary);
             font-size: 2rem;
@@ -671,27 +1183,39 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
             color: var(--text-primary);
         }
         
-        .btn-edit {
-            background: rgba(168, 85, 247, 0.1);
-            color: #a855f7;
-            border: 1px solid rgba(168, 85, 247, 0.2);
-        }
-        .btn-edit:hover {
-            background: rgba(168, 85, 247, 0.2);
-            border-color: #a855f7;
-        }
-        
-        .status-btn.selected {
-            color: white !important;
-        }
-        .status-btn.selected[data-status="present"] {
-            background: var(--success-color) !important;
-        }
-        .status-btn.selected[data-status="absent"] {
-            background: var(--danger-color) !important;
-        }
-        .status-btn.selected[data-status="late"] {
-            background: var(--warning-color) !important;
+        /* Responsive */
+        @media (max-width: 768px) {
+            .attendance-modal {
+                margin: 1% auto;
+                max-width: 95%;
+            }
+            
+            .attendance-modal .modal-header,
+            .attendance-modal .modal-body {
+                padding: 1rem;
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .status-buttons {
+                flex-direction: column;
+            }
+            
+            .status-btn span {
+                display: none;
+            }
+            
+            .footer-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .footer-btn {
+                justify-content: center;
+            }
         }
     </style>
     
@@ -781,6 +1305,23 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             // Store in attendance data
             attendanceData[studentId] = status;
+            
+            // Update summary
+            updateSummary();
+        }
+        
+        function updateSummary() {
+            const total = Object.keys(attendanceData).length;
+            const present = Object.values(attendanceData).filter(s => s === 'present').length;
+            const absent = Object.values(attendanceData).filter(s => s === 'absent').length;
+            const late = Object.values(attendanceData).filter(s => s === 'late').length;
+            
+            const summaryEl = document.getElementById('summaryText');
+            if (total === 0) {
+                summaryEl.textContent = 'Select attendance status for each student';
+            } else {
+                summaryEl.innerHTML = `<strong>${total}</strong> marked: <span style="color: #22c55e">${present} present</span>, <span style="color: #ef4444">${absent} absent</span>, <span style="color: #f59e0b">${late} late</span>`;
+            }
         }
         
         function markAllAs(status) {
@@ -791,6 +1332,7 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 btn.classList.add('selected');
                 attendanceData[btn.dataset.student] = status;
             });
+            updateSummary();
         }
         
         async function submitAttendance() {
@@ -876,6 +1418,89 @@ $unmarked_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 }
             } catch (error) {
                 alert('Error deleting attendance');
+            }
+        }
+        
+        // Holiday/Institute Closed Functions
+        function showHolidayModal() {
+            document.getElementById('holidayModal').style.display = 'block';
+        }
+        
+        function closeHolidayModal() {
+            document.getElementById('holidayModal').style.display = 'none';
+        }
+        
+        async function saveHoliday() {
+            const date = document.getElementById('holidayDate').value;
+            const type = document.getElementById('holidayType').value;
+            const reason = document.getElementById('holidayReason').value.trim();
+            
+            if (!date) {
+                alert('Please select a date');
+                return;
+            }
+            
+            if (!reason) {
+                alert('Please enter a reason for closure');
+                return;
+            }
+            
+            try {
+                const response = await fetch('attendance_handler.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'add_holiday',
+                        date: date,
+                        type: type,
+                        reason: reason
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Day marked as closed successfully!');
+                    window.location.href = `attendance.php?date=${date}`;
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error saving holiday');
+            }
+        }
+        
+        async function removeHoliday(holidayId) {
+            if (!confirm('Are you sure you want to remove this holiday and enable attendance for this day?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('attendance_handler.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'remove_holiday',
+                        holiday_id: holidayId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error removing holiday');
+            }
+        }
+        
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
             }
         }
     </script>

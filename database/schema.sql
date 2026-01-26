@@ -141,6 +141,20 @@ CREATE TABLE IF NOT EXISTS exam_entries (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
+-- Institute Holidays Table
+-- =============================================
+CREATE TABLE IF NOT EXISTS institute_holidays (
+    holiday_id INT AUTO_INCREMENT PRIMARY KEY,
+    holiday_date DATE NOT NULL UNIQUE,
+    reason VARCHAR(255) NOT NULL,
+    holiday_type ENUM('public_holiday', 'institute_holiday', 'emergency', 'other') DEFAULT 'institute_holiday',
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE SET NULL,
+    INDEX idx_holiday_date (holiday_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
 -- Events Table
 -- =============================================
 CREATE TABLE IF NOT EXISTS events (

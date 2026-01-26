@@ -384,7 +384,7 @@ $stats = [
                     </div>
                     
                     <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-                        <button type="button" class="btn btn-outline" onclick="closeHallModal()">
+                        <button type="button" class="btn btn-secondary" onclick="closeHallModal()">
                             <i class="fas fa-times"></i> Cancel
                         </button>
                         <button type="submit" class="btn btn-primary">

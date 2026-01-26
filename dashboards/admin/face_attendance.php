@@ -7,22 +7,41 @@ $conn = $db->getConnection();
 
 $selected_grade = $_GET['grade'] ?? '';
 $selected_section = $_GET['section'] ?? '';
+$selected_date = $_GET['date'] ?? date('Y-m-d');
 $today = date('Y-m-d');
 
-// Get unique grades
-$query = "SELECT DISTINCT grade FROM students ORDER BY grade";
+// Get unique grades (with proper numeric ordering)
+$query = "SELECT DISTINCT s.grade FROM students s 
+          JOIN users u ON s.user_id = u.user_id 
+          WHERE u.status = 'active' 
+          ORDER BY CAST(s.grade AS UNSIGNED), s.grade";
 $stmt = $conn->prepare($query);
 $stmt->execute();
 $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Get sections for selected grade
+// Get sections for selected grade (only with active students)
 $sections = [];
 if ($selected_grade) {
-    $query = "SELECT DISTINCT class_section FROM students WHERE grade = :grade ORDER BY class_section";
+    $query = "SELECT DISTINCT s.class_section FROM students s 
+              JOIN users u ON s.user_id = u.user_id 
+              WHERE s.grade = :grade AND u.status = 'active' 
+              ORDER BY s.class_section";
     $stmt = $conn->prepare($query);
     $stmt->bindParam(':grade', $selected_grade);
     $stmt->execute();
     $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
+// Check if selected date is a holiday
+$is_holiday = false;
+$holiday_info = null;
+if ($selected_date) {
+    $query = "SELECT * FROM institute_holidays WHERE holiday_date = :date";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':date', $selected_date);
+    $stmt->execute();
+    $holiday_info = $stmt->fetch(PDO::FETCH_ASSOC);
+    $is_holiday = $holiday_info ? true : false;
 }
 
 // Get students with face data for selected class
@@ -38,13 +57,13 @@ if ($selected_grade) {
     
     $query = "SELECT s.student_id, s.student_number, s.first_name, s.last_name, s.grade, s.class_section, s.user_id,
               (SELECT COUNT(*) FROM face_recognition_data f WHERE f.user_id = s.user_id AND f.is_active = 1) as face_count,
-              (SELECT a.status FROM attendance a WHERE a.student_id = s.student_id AND a.date = :today) as today_status
+              (SELECT a.status FROM attendance a WHERE a.student_id = s.student_id AND a.date = :selected_date) as today_status
               FROM students s
               JOIN users u ON s.user_id = u.user_id
               WHERE {$where}
               ORDER BY s.student_number";
     $stmt = $conn->prepare($query);
-    $params[':today'] = $today;
+    $params[':selected_date'] = $selected_date;
     foreach ($params as $key => $value) {
         $stmt->bindValue($key, $value);
     }
@@ -195,7 +214,7 @@ if ($selected_grade) {
                 <div class="card" style="margin-bottom: 1.5rem;">
                     <div class="card-body" style="padding: 1.5rem;">
                         <h3 style="color: var(--text-primary); margin-bottom: 1rem;"><i class="fas fa-filter"></i> Select Class for Attendance</h3>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: end;">
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; align-items: end;">
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 600; font-size: 0.875rem;">Grade</label>
                                 <select id="gradeFilter" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary);">
@@ -215,6 +234,10 @@ if ($selected_grade) {
                                 </select>
                             </div>
                             <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-weight: 600; font-size: 0.875rem;">Date</label>
+                                <input type="date" id="dateFilter" value="<?php echo $selected_date; ?>" max="<?php echo $today; ?>" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);">
+                            </div>
+                            <div>
                                 <button class="btn btn-primary" style="width: 100%; padding: 0.75rem;" onclick="applyFilters()">
                                     <i class="fas fa-search"></i> Load Class
                                 </button>
@@ -224,6 +247,36 @@ if ($selected_grade) {
                 </div>
                 
                 <?php if ($selected_grade): ?>
+                
+                <?php if ($is_holiday): ?>
+                <!-- Holiday Notice -->
+                <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05)); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-calendar-times" style="font-size: 1.5rem; color: #ef4444;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #ef4444; font-size: 1rem;">Institute Closed</div>
+                        <div style="color: var(--text-secondary); font-size: 0.875rem;">
+                            <?php echo htmlspecialchars($holiday_info['reason']); ?> 
+                            <span style="opacity: 0.7;">(<?php echo ucfirst(str_replace('_', ' ', $holiday_info['holiday_type'])); ?>)</span>
+                        </div>
+                    </div>
+                </div>
+                <?php elseif ($selected_date != $today): ?>
+                <!-- Past Date Notice -->
+                <div style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(234, 179, 8, 0.05)); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(234, 179, 8, 0.1); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-history" style="font-size: 1.5rem; color: #eab308;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #eab308; font-size: 1rem;">Viewing Past Date</div>
+                        <div style="color: var(--text-secondary); font-size: 0.875rem;">
+                            You are viewing attendance for <?php echo date('F j, Y', strtotime($selected_date)); ?>. Face recognition will mark attendance for this date.
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
                 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
                     <!-- Camera Section -->
                     <div class="card">
@@ -233,7 +286,7 @@ if ($selected_grade) {
                                 <button id="startCameraBtn" class="btn btn-primary" onclick="startCamera()">
                                     <i class="fas fa-play"></i> Start Camera
                                 </button>
-                                <button id="stopCameraBtn" class="btn btn-outline" onclick="stopCamera()" style="display: none;">
+                                <button id="stopCameraBtn" class="btn btn-secondary" onclick="stopCamera()" style="display: none;">
                                     <i class="fas fa-stop"></i> Stop
                                 </button>
                             </div>
@@ -267,7 +320,7 @@ if ($selected_grade) {
                     <!-- Student List -->
                     <div class="card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-users"></i> Students</h3>
+                            <h3 class="card-title"><i class="fas fa-users"></i> Students - <?php echo date('M j, Y', strtotime($selected_date)); ?></h3>
                             <span style="font-size: 0.875rem; color: var(--text-secondary);">
                                 <?php 
                                 $marked = array_filter($students_with_face, fn($s) => $s['today_status'] !== null);
@@ -350,10 +403,12 @@ if ($selected_grade) {
         function applyFilters() {
             const grade = document.getElementById('gradeFilter').value;
             const section = document.getElementById('sectionFilter').value;
+            const date = document.getElementById('dateFilter').value;
             
             let url = 'face_attendance.php?';
             if (grade) url += `grade=${grade}`;
             if (section) url += `&section=${encodeURIComponent(section)}`;
+            if (date) url += `&date=${date}`;
             
             window.location.href = url;
         }
@@ -556,7 +611,7 @@ if ($selected_grade) {
                     body: JSON.stringify({
                         action: 'mark_face_attendance',
                         student_id: student.student_id,
-                        date: '<?php echo $today; ?>'
+                        date: '<?php echo $selected_date; ?>'
                     })
                 });
                 

@@ -11,7 +11,14 @@ header('Content-Type: application/json');
 if (isset($_GET['get_sections'])) {
     $grade = $_GET['grade'] ?? '';
     
-    $query = "SELECT DISTINCT class_section FROM students WHERE grade = :grade ORDER BY class_section";
+    $query = "SELECT DISTINCT s.class_section 
+              FROM students s 
+              JOIN users u ON s.user_id = u.user_id 
+              WHERE s.grade = :grade 
+              AND s.class_section IS NOT NULL 
+              AND s.class_section != ''
+              AND u.status = 'active'
+              ORDER BY s.class_section";
     $stmt = $conn->prepare($query);
     $stmt->bindParam(':grade', $grade);
     $stmt->execute();
@@ -38,7 +45,7 @@ if (isset($_GET['get_students_by_grade'])) {
               FROM students s
               JOIN users u ON s.user_id = u.user_id
               WHERE {$where}
-              ORDER BY s.student_number";
+              ORDER BY s.class_section, s.student_number";
     
     $stmt = $conn->prepare($query);
     foreach ($params as $key => $value) {
@@ -177,6 +184,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Attendance deleted successfully']);
+            exit;
+        }
+        
+        // Add holiday/institute closed day
+        if ($action === 'add_holiday') {
+            $date = $input['date'] ?? '';
+            $type = $input['type'] ?? 'institute_holiday';
+            $reason = $input['reason'] ?? '';
+            
+            if (empty($date) || empty($reason)) {
+                throw new Exception('Date and reason are required');
+            }
+            
+            // Check if holiday already exists
+            $query = "SELECT holiday_id FROM institute_holidays WHERE holiday_date = :date";
+            $stmt = $conn->prepare($query);
+            $stmt->execute([':date' => $date]);
+            
+            if ($stmt->fetch()) {
+                throw new Exception('This date is already marked as a holiday');
+            }
+            
+            $query = "INSERT INTO institute_holidays (holiday_date, reason, holiday_type, created_by) VALUES (:date, :reason, :type, :created_by)";
+            $stmt = $conn->prepare($query);
+            $stmt->execute([
+                ':date' => $date,
+                ':reason' => $reason,
+                ':type' => $type,
+                ':created_by' => $_SESSION['user_id']
+            ]);
+            
+            $conn->commit();
+            echo json_encode(['success' => true, 'message' => 'Holiday added successfully']);
+            exit;
+        }
+        
+        // Remove holiday
+        if ($action === 'remove_holiday') {
+            $holiday_id = $input['holiday_id'] ?? 0;
+            
+            $query = "DELETE FROM institute_holidays WHERE holiday_id = :holiday_id";
+            $stmt = $conn->prepare($query);
+            $stmt->execute([':holiday_id' => $holiday_id]);
+            
+            $conn->commit();
+            echo json_encode(['success' => true, 'message' => 'Holiday removed successfully']);
+            exit;
+        }
+        
+        // Get holidays for a date range
+        if ($action === 'get_holidays') {
+            $start_date = $input['start_date'] ?? date('Y-m-01');
+            $end_date = $input['end_date'] ?? date('Y-m-t');
+            
+            $query = "SELECT * FROM institute_holidays WHERE holiday_date BETWEEN :start AND :end ORDER BY holiday_date";
+            $stmt = $conn->prepare($query);
+            $stmt->execute([':start' => $start_date, ':end' => $end_date]);
+            $holidays = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            $conn->commit();
+            echo json_encode(['success' => true, 'holidays' => $holidays]);
             exit;
         }
         
