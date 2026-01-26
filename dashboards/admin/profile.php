@@ -331,72 +331,7 @@ $default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' 
                 </div>
                 
                 <div class="header-right">
-                    <button class="theme-toggle" id="themeToggleTop" title="Toggle Theme">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    
-                    <div class="notification-icon">
-                        <i class="fas fa-bell"></i>
-                        <span class="badge">3</span>
-                    </div>
-                    
-                    <!-- Google-style Profile Dropdown -->
-                    <div class="profile-dropdown-container">
-                        <button class="profile-trigger" onclick="toggleProfileDropdown()">
-                            <img src="<?php echo htmlspecialchars($profile_pic ?? $default_avatar); ?>" alt="Profile" class="user-avatar" onerror="this.src='<?php echo htmlspecialchars($default_avatar); ?>'">
-                        </button>
-                        
-                        <div class="profile-dropdown" id="profileDropdown">
-                            <div class="profile-dropdown-header">
-                                <div class="profile-dropdown-avatar">
-                                    <img src="<?php echo htmlspecialchars($profile_pic ?? $default_avatar); ?>" alt="Profile" onerror="this.src='<?php echo htmlspecialchars($default_avatar); ?>'">
-                                </div>
-                                <div class="profile-dropdown-info">
-                                    <div class="profile-dropdown-name"><?php echo htmlspecialchars($user['username']); ?></div>
-                                    <div class="profile-dropdown-email"><?php echo htmlspecialchars($user['email']); ?></div>
-                                </div>
-                            </div>
-                            
-                            <div class="profile-dropdown-manage">
-                                <a href="profile.php" class="manage-account-btn">
-                                    Manage your Account
-                                </a>
-                            </div>
-                            
-                            <div class="profile-dropdown-divider"></div>
-                            
-                            <div class="profile-dropdown-menu">
-                                <a href="profile.php" class="profile-dropdown-item">
-                                    <i class="fas fa-user-circle"></i>
-                                    <span>Profile Settings</span>
-                                </a>
-                                <a href="settings.php" class="profile-dropdown-item">
-                                    <i class="fas fa-cog"></i>
-                                    <span>System Settings</span>
-                                </a>
-                                <a href="#" class="profile-dropdown-item" onclick="toggleTheme(); return false;">
-                                    <i class="fas fa-moon"></i>
-                                    <span>Dark Mode</span>
-                                    <span class="theme-indicator" id="themeIndicator">Off</span>
-                                </a>
-                            </div>
-                            
-                            <div class="profile-dropdown-divider"></div>
-                            
-                            <div class="profile-dropdown-menu">
-                                <a href="../../auth/logout.php" class="profile-dropdown-item logout-item">
-                                    <i class="fas fa-sign-out-alt"></i>
-                                    <span>Sign out</span>
-                                </a>
-                            </div>
-                            
-                            <div class="profile-dropdown-footer">
-                                <a href="#">Privacy Policy</a>
-                                <span>•</span>
-                                <a href="#">Terms of Service</a>
-                            </div>
-                        </div>
-                    </div>
+                    <?php include 'includes/profile_dropdown.php'; ?>
                 </div>
             </header>
             

@@ -1,6 +1,18 @@
 <?php
+// Set JSON header first to prevent any HTML output
+header('Content-Type: application/json');
+
+// Suppress HTML error output
+ini_set('display_errors', 0);
+error_reporting(0);
+
 require_once '../../config/config.php';
-checkRole(['admin']);
+
+// Check if user is logged in and is admin - return JSON error instead of redirect
+if (!isLoggedIn() || getUserRole() !== 'admin') {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
+    exit;
+}
 
 $db = new Database();
 $conn = $db->getConnection();
@@ -52,7 +64,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $response['message'] = 'Error: ' . $e->getMessage();
     }
     
-    header('Content-Type: application/json');
     echo json_encode($response);
     exit;
 }

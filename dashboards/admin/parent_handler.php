@@ -1,6 +1,18 @@
 <?php
+// Set JSON header first to prevent any HTML output
+header('Content-Type: application/json');
+
+// Suppress HTML error output
+ini_set('display_errors', 0);
+error_reporting(0);
+
 require_once '../../config/config.php';
-checkRole(['admin']);
+
+// Check if user is logged in and is admin - return JSON error instead of redirect
+if (!isLoggedIn() || getUserRole() !== 'admin') {
+    echo json_encode(['error' => 'Unauthorized access']);
+    exit;
+}
 
 $db = new Database();
 $conn = $db->getConnection();
@@ -21,7 +33,6 @@ if (isset($_GET['get_parent'])) {
     $stmt->execute();
     $parent = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    header('Content-Type: application/json');
     echo json_encode($parent);
     exit;
 }
@@ -41,7 +52,6 @@ if (isset($_GET['get_children'])) {
     $stmt->execute();
     $children = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    header('Content-Type: application/json');
     echo json_encode($children);
     exit;
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin Header Component with Google-style Profile Dropdown
+ * Admin Header Component with Google-style Profile Dropdown and Notifications
  * Include this file in all admin pages after fetching user data
  * This version includes the header-right wrapper div
  */
@@ -17,6 +17,17 @@ if (!isset($current_user)) {
     $current_user = $stmt_header->fetch(PDO::FETCH_ASSOC);
 }
 
+// Get unread notification count
+if (!isset($conn_header)) {
+    $db_header = new Database();
+    $conn_header = $db_header->getConnection();
+}
+$query_notif = "SELECT COUNT(*) FROM notifications WHERE user_id = :user_id AND is_read = 0";
+$stmt_notif = $conn_header->prepare($query_notif);
+$stmt_notif->bindParam(':user_id', $_SESSION['user_id']);
+$stmt_notif->execute();
+$unread_count = $stmt_notif->fetchColumn();
+
 // Get profile picture URL
 $header_profile_pic = !empty($current_user['profile_picture']) ? '../../' . $current_user['profile_picture'] : null;
 $header_default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='8' r='4' fill='%23cbd5e1'/%3E%3Cpath d='M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z' fill='%23cbd5e1'/%3E%3C/svg%3E";
@@ -28,9 +39,37 @@ $header_default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
         <i class="fas fa-moon"></i>
     </button>
     
-    <div class="notification-icon">
-        <i class="fas fa-bell"></i>
-        <span class="badge">3</span>
+    <!-- Notification Bell with Dropdown -->
+    <div class="notification-dropdown-container">
+        <button class="notification-trigger" onclick="toggleNotificationDropdown()" title="Notifications">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge" id="notificationBadge" style="<?php echo $unread_count > 0 ? '' : 'display: none;'; ?>"><?php echo $unread_count > 9 ? '9+' : $unread_count; ?></span>
+        </button>
+        
+        <div class="notification-dropdown" id="notificationDropdown">
+            <div class="notification-dropdown-header">
+                <h4>Notifications</h4>
+                <div class="notification-actions">
+                    <button onclick="markAllNotificationsRead()" title="Mark all as read" class="notif-action-btn">
+                        <i class="fas fa-check-double"></i>
+                    </button>
+                    <button onclick="openNotificationSettings()" title="Notification Settings" class="notif-action-btn">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="notification-dropdown-body" id="notificationList">
+                <div class="notification-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading notifications...</span>
+                </div>
+            </div>
+            
+            <div class="notification-dropdown-footer">
+                <a onclick="openNotificationModal()" style="cursor: pointer;">View All Notifications</a>
+            </div>
+        </div>
     </div>
     
     <!-- Google-style Profile Dropdown -->
@@ -93,3 +132,4 @@ $header_default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
 </div>
 
 <?php include_once __DIR__ . '/profile_dropdown_styles.php'; ?>
+<?php include_once __DIR__ . '/notification_styles.php'; ?>

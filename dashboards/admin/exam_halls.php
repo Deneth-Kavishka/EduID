@@ -144,18 +144,7 @@ $stats = [
                 </div>
                 
                 <div class="header-right">
-                    <button class="theme-toggle" id="themeToggleTop" title="Toggle Theme">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    
-                    <div class="notification-icon">
-                        <i class="fas fa-bell"></i>
-                        <span class="badge">3</span>
-                    </div>
-                    
-                    <div class="user-menu">
-                        <img src="../../assets/images/default-avatar.png" alt="Admin" class="user-avatar" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%228%22 r=%224%22 fill=%22%23cbd5e1%22/><path d=%22M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z%22 fill=%22%23cbd5e1%22/></svg>'">
-                    </div>
+                    <?php include 'includes/profile_dropdown.php'; ?>
                 </div>
             </header>
             
