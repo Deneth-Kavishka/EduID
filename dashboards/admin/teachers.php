@@ -8,6 +8,111 @@ $conn = $db->getConnection();
 $success = '';
 $error = '';
 
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    
+    // Add new teacher
+    if ($action === 'add_teacher') {
+        try {
+            $first_name = trim($_POST['first_name'] ?? '');
+            $last_name = trim($_POST['last_name'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $employee_id = trim($_POST['employee_id'] ?? '');
+            $password = $_POST['password'] ?? '';
+            $department = $_POST['department'] ?? null;
+            $subject = $_POST['subject'] ?? null;
+            $phone = $_POST['phone'] ?? null;
+            $qualification = $_POST['qualification'] ?? null;
+            
+            // Validate required fields
+            if (empty($first_name) || empty($last_name) || empty($email) || empty($employee_id) || empty($password)) {
+                throw new Exception('All required fields must be filled');
+            }
+            
+            // Check if email already exists
+            $query = "SELECT user_id FROM users WHERE email = :email";
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(':email', $email);
+            $stmt->execute();
+            if ($stmt->fetch()) {
+                throw new Exception('Email already exists');
+            }
+            
+            // Check if employee ID already exists
+            $query = "SELECT teacher_id FROM teachers WHERE employee_id = :employee_id";
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(':employee_id', $employee_id);
+            $stmt->execute();
+            if ($stmt->fetch()) {
+                throw new Exception('Employee ID already exists');
+            }
+            
+            $conn->beginTransaction();
+            
+            // Create username from first name and last name
+            $username = strtolower($first_name . '.' . $last_name);
+            $username = preg_replace('/[^a-z0-9.]/', '', $username);
+            
+            // Check if username exists, append number if needed
+            $base_username = $username;
+            $counter = 1;
+            while (true) {
+                $query = "SELECT user_id FROM users WHERE username = :username";
+                $stmt = $conn->prepare($query);
+                $stmt->bindParam(':username', $username);
+                $stmt->execute();
+                if (!$stmt->fetch()) break;
+                $username = $base_username . $counter;
+                $counter++;
+            }
+            
+            // Create user account
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            $query = "INSERT INTO users (username, email, password_hash, user_role, status, created_by) 
+                      VALUES (:username, :email, :password, 'teacher', 'active', :created_by)";
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(':username', $username);
+            $stmt->bindParam(':email', $email);
+            $stmt->bindParam(':password', $password_hash);
+            $stmt->bindParam(':created_by', $_SESSION['user_id']);
+            $stmt->execute();
+            
+            $user_id = $conn->lastInsertId();
+            
+            // Create teacher record
+            $query = "INSERT INTO teachers (user_id, employee_id, first_name, last_name, department, subject, phone, qualification) 
+                      VALUES (:user_id, :employee_id, :first_name, :last_name, :department, :subject, :phone, :qualification)";
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(':user_id', $user_id);
+            $stmt->bindParam(':employee_id', $employee_id);
+            $stmt->bindParam(':first_name', $first_name);
+            $stmt->bindParam(':last_name', $last_name);
+            $stmt->bindParam(':department', $department);
+            $stmt->bindParam(':subject', $subject);
+            $stmt->bindParam(':phone', $phone);
+            $stmt->bindParam(':qualification', $qualification);
+            $stmt->execute();
+            
+            $conn->commit();
+            
+            $success = 'Teacher "' . htmlspecialchars($first_name . ' ' . $last_name) . '" added successfully!';
+            
+            // Redirect if came from dashboard
+            if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'index.php') !== false) {
+                header('Location: index.php?success=' . urlencode($success));
+                exit;
+            }
+            
+        } catch (Exception $e) {
+            if ($conn->inTransaction()) {
+                $conn->rollBack();
+            }
+            $error = $e->getMessage();
+        }
+    }
+}
+
 // Get all teachers with their details
 $query = "SELECT t.*, u.username, u.email, u.status, u.created_at,
           (SELECT COUNT(*) FROM face_recognition_data WHERE user_id = t.user_id) as has_face_data

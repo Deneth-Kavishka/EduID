@@ -8,6 +8,113 @@ $conn = $db->getConnection();
 $success = '';
 $error = '';
 
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    
+    // Add new student
+    if ($action === 'add_student') {
+        try {
+            $first_name = trim($_POST['first_name'] ?? '');
+            $last_name = trim($_POST['last_name'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $student_id = trim($_POST['student_id'] ?? '');
+            $password = $_POST['password'] ?? '';
+            $date_of_birth = $_POST['date_of_birth'] ?? null;
+            $gender = $_POST['gender'] ?? null;
+            $grade = $_POST['grade'] ?? null;
+            $section = $_POST['section'] ?? null;
+            $phone = $_POST['phone'] ?? null;
+            
+            // Validate required fields
+            if (empty($first_name) || empty($last_name) || empty($email) || empty($student_id) || empty($password)) {
+                throw new Exception('All required fields must be filled');
+            }
+            
+            // Check if email already exists
+            $query = "SELECT user_id FROM users WHERE email = :email";
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(':email', $email);
+            $stmt->execute();
+            if ($stmt->fetch()) {
+                throw new Exception('Email already exists');
+            }
+            
+            // Check if student ID already exists
+            $query = "SELECT student_id FROM students WHERE student_number = :student_number";
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(':student_number', $student_id);
+            $stmt->execute();
+            if ($stmt->fetch()) {
+                throw new Exception('Student ID already exists');
+            }
+            
+            $conn->beginTransaction();
+            
+            // Create username from first name and last name
+            $username = strtolower($first_name . '.' . $last_name);
+            $username = preg_replace('/[^a-z0-9.]/', '', $username);
+            
+            // Check if username exists, append number if needed
+            $base_username = $username;
+            $counter = 1;
+            while (true) {
+                $query = "SELECT user_id FROM users WHERE username = :username";
+                $stmt = $conn->prepare($query);
+                $stmt->bindParam(':username', $username);
+                $stmt->execute();
+                if (!$stmt->fetch()) break;
+                $username = $base_username . $counter;
+                $counter++;
+            }
+            
+            // Create user account
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            $query = "INSERT INTO users (username, email, password_hash, user_role, status, created_by) 
+                      VALUES (:username, :email, :password, 'student', 'active', :created_by)";
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(':username', $username);
+            $stmt->bindParam(':email', $email);
+            $stmt->bindParam(':password', $password_hash);
+            $stmt->bindParam(':created_by', $_SESSION['user_id']);
+            $stmt->execute();
+            
+            $user_id = $conn->lastInsertId();
+            
+            // Create student record
+            $query = "INSERT INTO students (user_id, student_number, first_name, last_name, date_of_birth, gender, grade, section, phone) 
+                      VALUES (:user_id, :student_number, :first_name, :last_name, :dob, :gender, :grade, :section, :phone)";
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(':user_id', $user_id);
+            $stmt->bindParam(':student_number', $student_id);
+            $stmt->bindParam(':first_name', $first_name);
+            $stmt->bindParam(':last_name', $last_name);
+            $stmt->bindParam(':dob', $date_of_birth);
+            $stmt->bindParam(':gender', $gender);
+            $stmt->bindParam(':grade', $grade);
+            $stmt->bindParam(':section', $section);
+            $stmt->bindParam(':phone', $phone);
+            $stmt->execute();
+            
+            $conn->commit();
+            
+            $success = 'Student "' . htmlspecialchars($first_name . ' ' . $last_name) . '" added successfully!';
+            
+            // Redirect if came from dashboard
+            if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'index.php') !== false) {
+                header('Location: index.php?success=' . urlencode($success));
+                exit;
+            }
+            
+        } catch (Exception $e) {
+            if ($conn->inTransaction()) {
+                $conn->rollBack();
+            }
+            $error = $e->getMessage();
+        }
+    }
+}
+
 // Get all students with their details
 $query = "SELECT s.*, u.username, u.email, u.status, u.created_at,
           p.first_name as parent_fname, p.last_name as parent_lname, p.phone as parent_phone,
@@ -179,18 +286,7 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         <input type="text" placeholder="Search students..." id="searchInput">
                     </div>
                     
-                    <button class="theme-toggle" id="themeToggleTop" title="Toggle Theme">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    
-                    <div class="notification-icon">
-                        <i class="fas fa-bell"></i>
-                        <span class="badge">3</span>
-                    </div>
-                    
-                    <div class="user-menu">
-                        <img src="../../assets/images/default-avatar.png" alt="Admin" class="user-avatar" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%228%22 r=%224%22 fill=%22%23cbd5e1%22/><path d=%22M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z%22 fill=%22%23cbd5e1%22/></svg>'">
-                    </div>
+                    <?php include 'includes/profile_dropdown.php'; ?>
                 </div>
             </header>
             
@@ -275,14 +371,14 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     <div class="table-container" style="overflow-x: auto;">
                         <table id="studentsTable" style="width: 100%; table-layout: fixed;">
                             <colgroup>
-                                <col style="width: 8%;">
-                                <col style="width: 22%;">
+                                <col style="width: 12%;">
+                                <col style="width: 20%;">
                                 <col style="width: 10%;">
-                                <col style="width: 15%;">
+                                <col style="width: 13%;">
                                 <col style="width: 11%;">
-                                <col style="width: 10%;">
                                 <col style="width: 8%;">
-                                <col style="width: 16%;">
+                                <col style="width: 8%;">
+                                <col style="width: 14%;">
                             </colgroup>
                             <thead>
                                 <tr>
@@ -382,6 +478,223 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 <div style="text-align: center; padding: 2rem;">
                     <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i>
                     <p>Loading student details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Student Modal -->
+    <div id="editStudentModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #a855f7, #6366f1); color: white; border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;">
+                <h2 style="color: white;"><i class="fas fa-user-edit"></i> Edit Student</h2>
+                <span class="close" onclick="closeEditStudentModal()" style="color: white;">&times;</span>
+            </div>
+            <div class="modal-body" id="editStudentContent">
+                <form id="editStudentForm">
+                    <input type="hidden" name="action" value="update_student">
+                    <input type="hidden" name="student_id" id="edit_student_id">
+                    <input type="hidden" name="user_id" id="edit_user_id">
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fas fa-user" style="margin-right: 0.25rem;"></i> First Name *
+                            </label>
+                            <input type="text" name="first_name" id="edit_first_name" required 
+                                   style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fas fa-user" style="margin-right: 0.25rem;"></i> Last Name *
+                            </label>
+                            <input type="text" name="last_name" id="edit_last_name" required 
+                                   style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;">
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fas fa-envelope" style="margin-right: 0.25rem;"></i> Email *
+                            </label>
+                            <input type="email" name="email" id="edit_email" required 
+                                   style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fas fa-phone" style="margin-right: 0.25rem;"></i> Phone
+                            </label>
+                            <input type="tel" name="phone" id="edit_phone" 
+                                   style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;">
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fas fa-calendar" style="margin-right: 0.25rem;"></i> Date of Birth
+                            </label>
+                            <input type="date" name="date_of_birth" id="edit_date_of_birth" 
+                                   style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fas fa-venus-mars" style="margin-right: 0.25rem;"></i> Gender
+                            </label>
+                            <select name="gender" id="edit_gender" 
+                                    style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;">
+                                <option value="">Select</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fas fa-tint" style="margin-right: 0.25rem;"></i> Blood Group
+                            </label>
+                            <select name="blood_group" id="edit_blood_group" 
+                                    style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;">
+                                <option value="">Select</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fas fa-graduation-cap" style="margin-right: 0.25rem;"></i> Grade *
+                            </label>
+                            <select name="grade" id="edit_grade" required 
+                                    style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;">
+                                <?php for ($i = 1; $i <= 13; $i++): ?>
+                                <option value="<?php echo $i; ?>">Grade <?php echo $i; ?></option>
+                                <?php endfor; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fas fa-chalkboard" style="margin-right: 0.25rem;"></i> Class/Section *
+                            </label>
+                            <input type="text" name="class_section" id="edit_class_section" required 
+                                   style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fas fa-toggle-on" style="margin-right: 0.25rem;"></i> Status *
+                            </label>
+                            <select name="status" id="edit_status" required 
+                                    style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem;">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+                            <i class="fas fa-map-marker-alt" style="margin-right: 0.25rem;"></i> Address
+                        </label>
+                        <textarea name="address" id="edit_address" rows="2" 
+                                  style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9rem; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <!-- Face Recognition Section -->
+                    <div id="faceRecognitionSection" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-secondary); border-radius: 10px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                            <label style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">
+                                <i class="fas fa-camera" style="margin-right: 0.5rem; color: #22c55e;"></i> Face Recognition
+                            </label>
+                            <span id="faceStatusBadge" style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;"></span>
+                        </div>
+                        <div id="faceActionButtons" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <!-- Buttons will be populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditStudentModal()" style="padding: 0.6rem 1.25rem;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.25rem;">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Student Attendance Modal -->
+    <div id="attendanceModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;">
+                <h2 style="color: white;"><i class="fas fa-calendar-check"></i> Student Attendance</h2>
+                <span class="close" onclick="closeAttendanceModal()" style="color: white;">&times;</span>
+            </div>
+            <div class="modal-body" id="attendanceContent" style="padding: 1.5rem;">
+                <div style="text-align: center; padding: 2rem;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    <p>Loading attendance data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Face Registration Modal -->
+    <div id="faceRegModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;">
+                <h2 style="color: white;"><i class="fas fa-camera"></i> <span id="faceRegTitle">Register Face</span></h2>
+                <span class="close" onclick="closeFaceRegModal()" style="color: white;">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <div id="faceRegStudentInfo" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;" id="faceRegAvatar">ST</div>
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-primary);" id="faceRegStudentName">Student Name</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);" id="faceRegStudentClass">Class</div>
+                    </div>
+                </div>
+                
+                <div style="position: relative; width: 100%; max-width: 400px; margin: 0 auto;">
+                    <video id="faceRegVideo" style="width: 100%; border-radius: 10px; background: #000;" autoplay playsinline></video>
+                    <canvas id="faceRegCanvas" style="display: none;"></canvas>
+                    <div id="faceRegOverlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); border-radius: 10px;">
+                        <div style="text-align: center; color: white;">
+                            <i class="fas fa-video" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                            <p>Click "Start Camera" to begin</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 1rem;">
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        <i class="fas fa-info-circle"></i> Position your face clearly in the camera view
+                    </p>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                        <button type="button" id="startCameraBtn" class="btn btn-primary" onclick="startFaceCamera()" style="padding: 0.5rem 1rem;">
+                            <i class="fas fa-video"></i> Start Camera
+                        </button>
+                        <button type="button" id="captureFaceBtn" class="btn btn-primary" onclick="captureFace()" style="padding: 0.5rem 1rem; display: none;">
+                            <i class="fas fa-camera"></i> Capture Face
+                        </button>
+                        <button type="button" id="saveFaceBtn" class="btn btn-primary" onclick="saveFaceData()" style="padding: 0.5rem 1rem; display: none; background: #22c55e;">
+                            <i class="fas fa-save"></i> Save Face Data
+                        </button>
+                        <button type="button" id="retakeFaceBtn" class="btn btn-secondary" onclick="retakeFace()" style="padding: 0.5rem 1rem; display: none;">
+                            <i class="fas fa-redo"></i> Retake
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -669,12 +982,446 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
             document.getElementById('viewStudentModal').style.display = 'none';
         }
         
-        function editStudent(userId) {
-            window.location.href = `users.php?edit_student=${userId}`;
+        // Current student data for face registration
+        let currentStudentData = null;
+        let faceStream = null;
+        let capturedImageData = null;
+        
+        // Edit student - open modal
+        async function editStudent(userId) {
+            document.getElementById('editStudentModal').style.display = 'block';
+            
+            try {
+                const response = await fetch(`student_handler.php?get_student_by_user=1&user_id=${userId}`);
+                const student = await response.json();
+                
+                if (!student || !student.student_id) {
+                    alert('Student not found');
+                    closeEditStudentModal();
+                    return;
+                }
+                
+                currentStudentData = student;
+                
+                // Populate form fields
+                document.getElementById('edit_student_id').value = student.student_id;
+                document.getElementById('edit_user_id').value = student.user_id;
+                document.getElementById('edit_first_name').value = student.first_name || '';
+                document.getElementById('edit_last_name').value = student.last_name || '';
+                document.getElementById('edit_email').value = student.email || '';
+                document.getElementById('edit_phone').value = student.phone || '';
+                document.getElementById('edit_date_of_birth').value = student.date_of_birth || '';
+                document.getElementById('edit_gender').value = student.gender || '';
+                document.getElementById('edit_blood_group').value = student.blood_group || '';
+                document.getElementById('edit_grade').value = student.grade || '';
+                document.getElementById('edit_class_section').value = student.class_section || '';
+                document.getElementById('edit_status').value = student.status || 'active';
+                document.getElementById('edit_address').value = student.address || '';
+                
+                // Update face recognition section
+                updateFaceRecognitionSection(student);
+            } catch (error) {
+                console.error('Error loading student:', error);
+                alert('Error loading student details');
+                closeEditStudentModal();
+            }
         }
         
-        function viewAttendance(studentId) {
-            window.location.href = `attendance.php?student_id=${studentId}`;
+        function updateFaceRecognitionSection(student) {
+            const badge = document.getElementById('faceStatusBadge');
+            const buttons = document.getElementById('faceActionButtons');
+            
+            if (student.has_face_data > 0) {
+                badge.innerHTML = '<i class="fas fa-check-circle"></i> Registered';
+                badge.style.background = 'rgba(34, 197, 94, 0.1)';
+                badge.style.color = '#22c55e';
+                
+                buttons.innerHTML = `
+                    <button type="button" class="btn" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);" onclick="openFaceRegModal(true)">
+                        <i class="fas fa-sync-alt"></i> Update Face Data
+                    </button>
+                    <button type="button" class="btn" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);" onclick="deleteFaceData()">
+                        <i class="fas fa-trash"></i> Delete Face Data
+                    </button>
+                `;
+            } else {
+                badge.innerHTML = '<i class="fas fa-times-circle"></i> Not Registered';
+                badge.style.background = 'rgba(239, 68, 68, 0.1)';
+                badge.style.color = '#ef4444';
+                
+                buttons.innerHTML = `
+                    <button type="button" class="btn" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; background: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.2);" onclick="openFaceRegModal(false)">
+                        <i class="fas fa-camera"></i> Register Face
+                    </button>
+                `;
+            }
+        }
+        
+        function openFaceRegModal(isUpdate) {
+            if (!currentStudentData) return;
+            
+            document.getElementById('faceRegTitle').textContent = isUpdate ? 'Update Face Data' : 'Register Face';
+            document.getElementById('faceRegStudentName').textContent = `${currentStudentData.first_name} ${currentStudentData.last_name}`;
+            document.getElementById('faceRegStudentClass').textContent = `Grade ${currentStudentData.grade} - ${currentStudentData.class_section}`;
+            document.getElementById('faceRegAvatar').textContent = (currentStudentData.first_name[0] + currentStudentData.last_name[0]).toUpperCase();
+            
+            // Reset UI
+            document.getElementById('faceRegOverlay').style.display = 'flex';
+            document.getElementById('startCameraBtn').style.display = 'inline-flex';
+            document.getElementById('captureFaceBtn').style.display = 'none';
+            document.getElementById('saveFaceBtn').style.display = 'none';
+            document.getElementById('retakeFaceBtn').style.display = 'none';
+            capturedImageData = null;
+            
+            document.getElementById('faceRegModal').style.display = 'block';
+        }
+        
+        function closeFaceRegModal() {
+            stopFaceCamera();
+            document.getElementById('faceRegModal').style.display = 'none';
+        }
+        
+        async function startFaceCamera() {
+            try {
+                faceStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+                const video = document.getElementById('faceRegVideo');
+                video.srcObject = faceStream;
+                
+                document.getElementById('faceRegOverlay').style.display = 'none';
+                document.getElementById('startCameraBtn').style.display = 'none';
+                document.getElementById('captureFaceBtn').style.display = 'inline-flex';
+            } catch (err) {
+                alert('Unable to access camera. Please ensure camera permissions are granted.');
+                console.error('Camera error:', err);
+            }
+        }
+        
+        function stopFaceCamera() {
+            if (faceStream) {
+                faceStream.getTracks().forEach(track => track.stop());
+                faceStream = null;
+            }
+        }
+        
+        function captureFace() {
+            const video = document.getElementById('faceRegVideo');
+            const canvas = document.getElementById('faceRegCanvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            capturedImageData = canvas.toDataURL('image/jpeg', 0.9);
+            
+            // Show captured image
+            video.style.display = 'none';
+            canvas.style.display = 'block';
+            canvas.style.width = '100%';
+            canvas.style.borderRadius = '10px';
+            
+            stopFaceCamera();
+            
+            document.getElementById('captureFaceBtn').style.display = 'none';
+            document.getElementById('saveFaceBtn').style.display = 'inline-flex';
+            document.getElementById('retakeFaceBtn').style.display = 'inline-flex';
+        }
+        
+        function retakeFace() {
+            const video = document.getElementById('faceRegVideo');
+            const canvas = document.getElementById('faceRegCanvas');
+            
+            video.style.display = 'block';
+            canvas.style.display = 'none';
+            capturedImageData = null;
+            
+            document.getElementById('saveFaceBtn').style.display = 'none';
+            document.getElementById('retakeFaceBtn').style.display = 'none';
+            
+            startFaceCamera();
+        }
+        
+        async function saveFaceData() {
+            if (!capturedImageData || !currentStudentData) return;
+            
+            const btn = document.getElementById('saveFaceBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('user_id', currentStudentData.user_id);
+                formData.append('face_image', capturedImageData);
+                
+                const response = await fetch('save_face_admin.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Face data saved successfully!');
+                    currentStudentData.has_face_data = 1;
+                    updateFaceRecognitionSection(currentStudentData);
+                    closeFaceRegModal();
+                } else {
+                    alert(result.message || 'Error saving face data');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error saving face data');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Save Face Data';
+            }
+        }
+        
+        async function deleteFaceData() {
+            if (!currentStudentData) return;
+            
+            if (!confirm('Are you sure you want to delete the face recognition data for this student?')) return;
+            
+            try {
+                const formData = new FormData();
+                formData.append('action', 'delete_face_data');
+                formData.append('user_id', currentStudentData.user_id);
+                
+                const response = await fetch('student_handler.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Face data deleted successfully!');
+                    currentStudentData.has_face_data = 0;
+                    updateFaceRecognitionSection(currentStudentData);
+                } else {
+                    alert(result.message || 'Error deleting face data');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting face data');
+            }
+        }
+        
+        function closeEditStudentModal() {
+            document.getElementById('editStudentModal').style.display = 'none';
+            currentStudentData = null;
+        }
+        
+        // Handle edit form submission
+        document.getElementById('editStudentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            try {
+                const response = await fetch('student_handler.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Student updated successfully!');
+                    closeEditStudentModal();
+                    location.reload();
+                } else {
+                    alert(result.message || 'Error updating student');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating student');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+        
+        // View Attendance
+        let currentAttendanceMonth = new Date().toISOString().slice(0, 7);
+        
+        async function viewAttendance(studentId) {
+            document.getElementById('attendanceModal').style.display = 'block';
+            document.getElementById('attendanceContent').innerHTML = `
+                <div style="text-align: center; padding: 2rem;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    <p>Loading attendance data...</p>
+                </div>
+            `;
+            
+            await loadAttendanceData(studentId, currentAttendanceMonth);
+        }
+        
+        async function loadAttendanceData(studentId, month) {
+            try {
+                const response = await fetch(`student_handler.php?get_attendance=1&student_id=${studentId}&month=${month}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById('attendanceContent').innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+                    return;
+                }
+                
+                const student = data.student;
+                const stats = data.stats || { total_days: 0, present: 0, absent: 0, late: 0, excused: 0 };
+                const overall = data.overall || { total_days: 0, present: 0, absent: 0, late: 0 };
+                const percentage = data.percentage || 0;
+                
+                let html = `
+                    <!-- Student Info -->
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem; font-weight: 700;">
+                            ${(student.first_name[0] + student.last_name[0]).toUpperCase()}
+                        </div>
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0; color: var(--text-primary); font-size: 1.2rem;">${student.first_name} ${student.last_name}</h3>
+                            <p style="margin: 0.25rem 0 0; color: var(--text-secondary); font-size: 0.9rem;">
+                                ${student.student_number} • Grade ${student.grade} - ${student.class_section}
+                            </p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 2rem; font-weight: 700; color: ${percentage >= 75 ? '#22c55e' : percentage >= 50 ? '#f59e0b' : '#ef4444'};">${percentage}%</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">Overall Attendance</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Month Selector -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                        <h4 style="margin: 0; color: var(--text-primary);"><i class="fas fa-calendar-alt" style="margin-right: 0.5rem; color: #f59e0b;"></i> Monthly Report</h4>
+                        <input type="month" value="${month}" onchange="loadAttendanceData(${studentId}, this.value)" 
+                               style="padding: 0.4rem 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.85rem;">
+                    </div>
+                    
+                    <!-- Stats Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
+                        <div style="text-align: center; padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #3b82f6;">${stats.total_days || 0}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);">Total Days</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.75rem; background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.2);">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #22c55e;">${stats.present || 0}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);">Present</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #ef4444;">${stats.absent || 0}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);">Absent</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.75rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;">${stats.late || 0}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);">Late</div>
+                        </div>
+                        <div style="text-align: center; padding: 0.75rem; background: rgba(139, 92, 246, 0.1); border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.2);">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;">${stats.excused || 0}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);">Excused</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Attendance Records -->
+                    <div style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="position: sticky; top: 0; background: var(--bg-secondary);">
+                                <tr>
+                                    <th style="padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Date</th>
+                                    <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Status</th>
+                                    <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Method</th>
+                                    <th style="padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Time</th>
+                                    <th style="padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                if (data.attendance && data.attendance.length > 0) {
+                    const statusStyles = {
+                        'present': { bg: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', icon: 'fa-check-circle' },
+                        'absent': { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', icon: 'fa-times-circle' },
+                        'late': { bg: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', icon: 'fa-clock' },
+                        'excused': { bg: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', icon: 'fa-user-shield' }
+                    };
+                    
+                    const methodIcons = {
+                        'face': { icon: 'fa-smile', color: '#22c55e' },
+                        'qr': { icon: 'fa-qrcode', color: '#8b5cf6' },
+                        'manual': { icon: 'fa-user-edit', color: '#f59e0b' }
+                    };
+                    
+                    data.attendance.forEach(record => {
+                        const style = statusStyles[record.status] || statusStyles['absent'];
+                        const method = methodIcons[record.method] || methodIcons['manual'];
+                        const date = new Date(record.date);
+                        const formattedDate = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                        
+                        html += `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.6rem 1rem; font-size: 0.85rem; color: var(--text-primary);">${formattedDate}</td>
+                                <td style="padding: 0.6rem 1rem; text-align: center;">
+                                    <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 20px; background: ${style.bg}; color: ${style.color}; font-size: 0.7rem; font-weight: 600; text-transform: capitalize;">
+                                        <i class="fas ${style.icon}" style="font-size: 0.65rem;"></i> ${record.status}
+                                    </span>
+                                </td>
+                                <td style="padding: 0.6rem 1rem; text-align: center;">
+                                    <i class="fas ${method.icon}" style="color: ${method.color};" title="${record.method}"></i>
+                                </td>
+                                <td style="padding: 0.6rem 1rem; font-size: 0.8rem; color: var(--text-secondary);">
+                                    ${record.check_in_time ? record.check_in_time.substring(0, 5) : '-'}
+                                </td>
+                                <td style="padding: 0.6rem 1rem; font-size: 0.8rem; color: var(--text-secondary);">
+                                    ${record.remarks || '-'}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    html += `
+                        <tr>
+                            <td colspan="5" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+                                <i class="fas fa-calendar-times" style="font-size: 2rem; opacity: 0.3; margin-bottom: 0.5rem; display: block;"></i>
+                                No attendance records for this month
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                        <button class="btn btn-secondary" onclick="closeAttendanceModal()" style="padding: 0.6rem 1.25rem;">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                `;
+                
+                document.getElementById('attendanceContent').innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('attendanceContent').innerHTML = '<div class="alert alert-error">Error loading attendance data</div>';
+            }
+        }
+        
+        function closeAttendanceModal() {
+            document.getElementById('attendanceModal').style.display = 'none';
+        }
+        
+        // Close modals on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                if (event.target.id === 'faceRegModal') {
+                    stopFaceCamera();
+                }
+                event.target.style.display = 'none';
+            }
         }
     </script>
 </body>

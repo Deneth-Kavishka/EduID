@@ -5,6 +5,10 @@ checkRole(['admin']);
 $db = new Database();
 $conn = $db->getConnection();
 
+// Get success/error messages from redirects
+$success = $_GET['success'] ?? '';
+$error = $_GET['error'] ?? '';
+
 // Get statistics
 $stats = [];
 
@@ -182,24 +186,23 @@ $attendance_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 </div>
                 
-                <div class="header-right">
-                    <button class="theme-toggle" id="themeToggleTop" title="Toggle Theme">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    
-                    <div class="notification-icon">
-                        <i class="fas fa-bell"></i>
-                        <span class="badge">3</span>
-                    </div>
-                    
-                    <div class="user-menu">
-                        <img src="../../assets/images/default-avatar.png" alt="Admin" class="user-avatar" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%228%22 r=%224%22 fill=%22%23cbd5e1%22/><path d=%22M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z%22 fill=%22%23cbd5e1%22/></svg>'">
-                    </div>
-                </div>
+                <?php include 'includes/header_profile.php'; ?>
             </header>
             
             <!-- Content Area -->
             <div class="content-area">
+                <?php if ($success): ?>
+                <div class="alert alert-success" style="margin-bottom: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px; color: #22c55e; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($success); ?>
+                </div>
+                <?php endif; ?>
+                
+                <?php if ($error): ?>
+                <div class="alert alert-error" style="margin-bottom: 1rem; padding: 1rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; color: #ef4444; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($error); ?>
+                </div>
+                <?php endif; ?>
+                
                 <!-- Stats Grid -->
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -360,23 +363,23 @@ $attendance_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 <!-- Quick Actions -->
                 <div class="mt-3" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
-                    <a href="users.php?action=add_student" class="card" style="text-align: center; padding: 2rem; cursor: pointer;">
+                    <div class="card" style="text-align: center; padding: 2rem; cursor: pointer;" onclick="openAddStudentModal()">
                         <i class="fas fa-user-plus" style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
                         <h3 style="font-size: 1.1rem; color: var(--text-primary);">Add New Student</h3>
                         <p style="color: var(--text-secondary); font-size: 0.875rem;">Register a new student</p>
-                    </a>
+                    </div>
                     
-                    <a href="users.php?action=add_teacher" class="card" style="text-align: center; padding: 2rem; cursor: pointer;">
+                    <div class="card" style="text-align: center; padding: 2rem; cursor: pointer;" onclick="openAddTeacherModal()">
                         <i class="fas fa-chalkboard-user" style="font-size: 2.5rem; color: var(--success-color); margin-bottom: 1rem;"></i>
                         <h3 style="font-size: 1.1rem; color: var(--text-primary);">Add New Teacher</h3>
                         <p style="color: var(--text-secondary); font-size: 0.875rem;">Register a new teacher</p>
-                    </a>
+                    </div>
                     
-                    <a href="events.php?action=create" class="card" style="text-align: center; padding: 2rem; cursor: pointer;">
+                    <div class="card" style="text-align: center; padding: 2rem; cursor: pointer;" onclick="openCreateEventModal()">
                         <i class="fas fa-calendar-plus" style="font-size: 2.5rem; color: var(--warning-color); margin-bottom: 1rem;"></i>
                         <h3 style="font-size: 1.1rem; color: var(--text-primary);">Create Event</h3>
                         <p style="color: var(--text-secondary); font-size: 0.875rem;">Schedule a new event</p>
-                    </a>
+                    </div>
                     
                     <a href="reports.php" class="card" style="text-align: center; padding: 2rem; cursor: pointer;">
                         <i class="fas fa-chart-bar" style="font-size: 2.5rem; color: var(--danger-color); margin-bottom: 1rem;"></i>
@@ -388,6 +391,367 @@ $attendance_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </main>
     </div>
     
+    <!-- Add Student Modal -->
+    <div id="addStudentModal" class="modal-overlay" style="display: none;">
+        <div class="modal-container" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-plus" style="color: var(--primary-color);"></i> Add New Student</h3>
+                <button class="modal-close" onclick="closeModal('addStudentModal')">&times;</button>
+            </div>
+            <form id="addStudentForm" method="POST" action="students.php">
+                <input type="hidden" name="action" value="add_student">
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>First Name <span style="color: #ef4444;">*</span></label>
+                            <input type="text" name="first_name" required placeholder="Enter first name">
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name <span style="color: #ef4444;">*</span></label>
+                            <input type="text" name="last_name" required placeholder="Enter last name">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Email <span style="color: #ef4444;">*</span></label>
+                            <input type="email" name="email" required placeholder="student@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Student ID <span style="color: #ef4444;">*</span></label>
+                            <input type="text" name="student_id" required placeholder="e.g., STU2024001">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" name="date_of_birth">
+                        </div>
+                        <div class="form-group">
+                            <label>Gender</label>
+                            <select name="gender">
+                                <option value="">Select Gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Grade/Class</label>
+                            <input type="text" name="grade" placeholder="e.g., Grade 10">
+                        </div>
+                        <div class="form-group">
+                            <label>Section</label>
+                            <input type="text" name="section" placeholder="e.g., A">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" name="phone" placeholder="+94 XX XXX XXXX">
+                    </div>
+                    <div class="form-group">
+                        <label>Password <span style="color: #ef4444;">*</span></label>
+                        <input type="password" name="password" required placeholder="Create a password" minlength="6">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addStudentModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add Teacher Modal -->
+    <div id="addTeacherModal" class="modal-overlay" style="display: none;">
+        <div class="modal-container" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-chalkboard-user" style="color: var(--success-color);"></i> Add New Teacher</h3>
+                <button class="modal-close" onclick="closeModal('addTeacherModal')">&times;</button>
+            </div>
+            <form id="addTeacherForm" method="POST" action="teachers.php">
+                <input type="hidden" name="action" value="add_teacher">
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>First Name <span style="color: #ef4444;">*</span></label>
+                            <input type="text" name="first_name" required placeholder="Enter first name">
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name <span style="color: #ef4444;">*</span></label>
+                            <input type="text" name="last_name" required placeholder="Enter last name">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Email <span style="color: #ef4444;">*</span></label>
+                            <input type="email" name="email" required placeholder="teacher@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Employee ID <span style="color: #ef4444;">*</span></label>
+                            <input type="text" name="employee_id" required placeholder="e.g., EMP2024001">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <input type="text" name="department" placeholder="e.g., Mathematics">
+                        </div>
+                        <div class="form-group">
+                            <label>Subject Specialization</label>
+                            <input type="text" name="subject" placeholder="e.g., Algebra, Calculus">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="tel" name="phone" placeholder="+94 XX XXX XXXX">
+                        </div>
+                        <div class="form-group">
+                            <label>Qualification</label>
+                            <input type="text" name="qualification" placeholder="e.g., M.Sc., B.Ed.">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Password <span style="color: #ef4444;">*</span></label>
+                        <input type="password" name="password" required placeholder="Create a password" minlength="6">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addTeacherModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add Teacher</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Create Event Modal -->
+    <div id="createEventModal" class="modal-overlay" style="display: none;">
+        <div class="modal-container" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-calendar-plus" style="color: var(--warning-color);"></i> Create New Event</h3>
+                <button class="modal-close" onclick="closeModal('createEventModal')">&times;</button>
+            </div>
+            <form id="createEventForm" method="POST" action="events.php">
+                <input type="hidden" name="action" value="create_event">
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <div class="form-group">
+                        <label>Event Name <span style="color: #ef4444;">*</span></label>
+                        <input type="text" name="event_name" required placeholder="Enter event name">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Event Type</label>
+                            <select name="event_type">
+                                <option value="">Select Type</option>
+                                <option value="academic">Academic</option>
+                                <option value="sports">Sports</option>
+                                <option value="cultural">Cultural</option>
+                                <option value="exam">Examination</option>
+                                <option value="meeting">Meeting</option>
+                                <option value="holiday">Holiday</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Event Date <span style="color: #ef4444;">*</span></label>
+                            <input type="date" name="event_date" required min="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Start Time</label>
+                            <input type="time" name="start_time">
+                        </div>
+                        <div class="form-group">
+                            <label>End Time</label>
+                            <input type="time" name="end_time">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>Venue</label>
+                            <input type="text" name="venue" placeholder="e.g., Main Auditorium">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Participants</label>
+                            <input type="number" name="max_participants" min="1" placeholder="e.g., 100">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description" rows="3" placeholder="Enter event description..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createEventModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Create Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <style>
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .modal-container {
+            background: var(--bg-primary);
+            border-radius: 16px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+        }
+    </style>
+    
     <script src="../../assets/js/theme.js"></script>
+    <script>
+        function openAddStudentModal() {
+            document.getElementById('addStudentModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function openAddTeacherModal() {
+            document.getElementById('addTeacherModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function openCreateEventModal() {
+            document.getElementById('createEventModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        
+        // Close modal on backdrop click
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+        
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay').forEach(modal => {
+                    modal.style.display = 'none';
+                });
+                document.body.style.overflow = '';
+            }
+        });
+    </script>
 </body>
 </html>
