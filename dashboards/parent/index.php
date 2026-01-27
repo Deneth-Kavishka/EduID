@@ -149,9 +149,7 @@ if (!empty($child_ids)) {
                     </div>
                     
                     <div class="user-menu">
-                        <img src="../../assets/images/default-avatar.png" 
-                             alt="Parent" class="user-avatar" 
-                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%228%22 r=%224%22 fill=%22%23cbd5e1%22/><path d=%22M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z%22 fill=%22%23cbd5e1%22/></svg>'">
+                        <img src="../../assets/images/default-avatar.png" alt="Parent" class="user-avatar" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2712%27 cy=%278%27 r=%274%27 fill=%27%23cbd5e1%27/%3E%3Cpath d=%27M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z%27 fill=%27%23cbd5e1%27/%3E%3C/svg%3E';">
                     </div>
                 </div>
             </header>
@@ -250,9 +248,8 @@ if (!empty($child_ids)) {
                                 ?>
                                 <div class="card" style="padding: 1.5rem;">
                                     <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1rem;">
-                                        <img src="<?php echo $child['profile_picture'] ?: '../../assets/images/default-avatar.png'; ?>" 
-                                             style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color);"
-                                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%228%22 r=%224%22 fill=%22%23cbd5e1%22/><path d=%22M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z%22 fill=%22%23cbd5e1%22/></svg>'">
+                                        <?php $childAvatar = !empty($child['profile_picture']) ? $child['profile_picture'] : '../../assets/images/default-avatar.png'; ?>
+                                        <img src="<?php echo htmlspecialchars($childAvatar); ?>" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color);" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2712%27 cy=%278%27 r=%274%27 fill=%27%23cbd5e1%27/%3E%3Cpath d=%27M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z%27 fill=%27%23cbd5e1%27/%3E%3C/svg%3E';">
                                         <div style="flex: 1;">
                                             <h4 style="font-size: 1.1rem; margin-bottom: 0.25rem; color: var(--text-primary);">
                                                 <?php echo htmlspecialchars($child['first_name'] . ' ' . $child['last_name']); ?>
