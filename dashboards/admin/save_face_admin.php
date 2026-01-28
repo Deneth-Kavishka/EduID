@@ -15,6 +15,7 @@ try {
     
     $user_id = $_POST['user_id'] ?? null;
     $face_image = $_POST['face_image'] ?? null;
+    $face_descriptor = $_POST['face_descriptor'] ?? null;
     
     if (!$user_id) {
         echo json_encode(['success' => false, 'message' => 'User ID is required']);
@@ -23,6 +24,18 @@ try {
     
     if (!$face_image) {
         echo json_encode(['success' => false, 'message' => 'No face image received']);
+        exit;
+    }
+    
+    if (!$face_descriptor) {
+        echo json_encode(['success' => false, 'message' => 'No face descriptor received. Please ensure face is detected properly.']);
+        exit;
+    }
+    
+    // Validate face descriptor is a valid JSON array
+    $descriptor_array = json_decode($face_descriptor, true);
+    if (!is_array($descriptor_array) || count($descriptor_array) < 128) {
+        echo json_encode(['success' => false, 'message' => 'Invalid face descriptor format']);
         exit;
     }
     
@@ -60,21 +73,13 @@ try {
         }
     }
     
-    // Generate a simple face descriptor (placeholder - in production, use face-api.js or similar)
-    // This creates a basic descriptor based on image hash for demo purposes
-    $face_descriptor = json_encode([
-        'type' => 'admin_registered',
-        'hash' => md5($face_image),
-        'timestamp' => time()
-    ]);
-    
     // Deactivate old face data
     $query = "UPDATE face_recognition_data SET is_active = 0 WHERE user_id = :user_id";
     $stmt = $conn->prepare($query);
     $stmt->bindParam(':user_id', $user_id);
     $stmt->execute();
     
-    // Insert new face data
+    // Insert new face data with actual face descriptor from face-api.js
     $query = "INSERT INTO face_recognition_data (user_id, face_descriptor, image_path, is_active, created_at) 
               VALUES (:user_id, :face_descriptor, :image_path, 1, NOW())";
     $stmt = $conn->prepare($query);
@@ -83,10 +88,18 @@ try {
     $stmt->bindParam(':image_path', $image_path);
     $stmt->execute();
     
+    // Also update face_encoding in students table for quick reference
+    $query = "UPDATE students SET face_encoding = :face_encoding WHERE user_id = :user_id";
+    $stmt = $conn->prepare($query);
+    $stmt->bindParam(':face_encoding', $face_descriptor);
+    $stmt->bindParam(':user_id', $user_id);
+    $stmt->execute();
+    
     echo json_encode([
         'success' => true, 
         'message' => 'Face data saved successfully',
-        'image_path' => $image_path
+        'image_path' => $image_path,
+        'descriptor_length' => count($descriptor_array)
     ]);
     
 } catch (PDOException $e) {

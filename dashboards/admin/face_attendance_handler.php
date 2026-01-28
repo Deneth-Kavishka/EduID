@@ -9,14 +9,14 @@ header('Content-Type: application/json');
 
 // Get face data for students in a class
 if (isset($_GET['action']) && $_GET['action'] === 'get_face_data') {
-    $grade = $_GET['grade'] ?? '';
-    $section = $_GET['section'] ?? '';
+    $grade = trim($_GET['grade'] ?? '');
+    $section = trim($_GET['section'] ?? '');
     
-    $where = "s.grade = :grade AND u.status = 'active' AND f.is_active = 1";
+    $where = "TRIM(s.grade) = :grade AND u.status = 'active' AND f.is_active = 1";
     $params = [':grade' => $grade];
     
     if ($section) {
-        $where .= " AND s.class_section = :section";
+        $where .= " AND TRIM(s.class_section) = :section";
         $params[':section'] = $section;
     }
     
@@ -35,7 +35,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_face_data') {
     $stmt->execute();
     $faces = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    echo json_encode(['success' => true, 'faces' => $faces]);
+    // Log for debugging
+    error_log("Face data query for grade={$grade}, section={$section}: Found " . count($faces) . " faces");
+    
+    echo json_encode(['success' => true, 'faces' => $faces, 'count' => count($faces)]);
     exit;
 }
 

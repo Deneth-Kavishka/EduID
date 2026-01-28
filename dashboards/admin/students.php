@@ -168,6 +168,8 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Use vladmandic face-api fork for better compatibility -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
 </head>
 <body>
     <div class="dashboard">
@@ -666,15 +668,25 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     </div>
                 </div>
                 
+                <!-- Face API Status -->
+                <div id="faceApiStatus" style="margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px; text-align: center; display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> <span id="faceApiStatusText">Loading face detection models...</span>
+                </div>
+                
                 <div style="position: relative; width: 100%; max-width: 400px; margin: 0 auto;">
                     <video id="faceRegVideo" style="width: 100%; border-radius: 10px; background: #000;" autoplay playsinline></video>
                     <canvas id="faceRegCanvas" style="display: none;"></canvas>
+                    <canvas id="faceDetectionCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
                     <div id="faceRegOverlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); border-radius: 10px;">
                         <div style="text-align: center; color: white;">
                             <i class="fas fa-video" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
                             <p>Click "Start Camera" to begin</p>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Face Detection Feedback -->
+                <div id="faceDetectionFeedback" style="margin-top: 0.75rem; padding: 0.5rem; border-radius: 8px; text-align: center; font-size: 0.85rem; display: none;">
                 </div>
                 
                 <div style="text-align: center; margin-top: 1rem;">
@@ -685,7 +697,7 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         <button type="button" id="startCameraBtn" class="btn btn-primary" onclick="startFaceCamera()" style="padding: 0.5rem 1rem;">
                             <i class="fas fa-video"></i> Start Camera
                         </button>
-                        <button type="button" id="captureFaceBtn" class="btn btn-primary" onclick="captureFace()" style="padding: 0.5rem 1rem; display: none;">
+                        <button type="button" id="captureFaceBtn" class="btn btn-primary" onclick="captureFaceWithDescriptor()" style="padding: 0.5rem 1rem; display: none;" disabled>
                             <i class="fas fa-camera"></i> Capture Face
                         </button>
                         <button type="button" id="saveFaceBtn" class="btn btn-primary" onclick="saveFaceData()" style="padding: 0.5rem 1rem; display: none; background: #22c55e;">
@@ -986,6 +998,8 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
         let currentStudentData = null;
         let faceStream = null;
         let capturedImageData = null;
+        let capturedFaceDescriptor = null;
+        let faceDetectionInterval = null;
         
         // Edit student - open modal
         async function editStudent(userId) {
@@ -1069,27 +1083,92 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
             document.getElementById('faceRegOverlay').style.display = 'flex';
             document.getElementById('startCameraBtn').style.display = 'inline-flex';
             document.getElementById('captureFaceBtn').style.display = 'none';
+            document.getElementById('captureFaceBtn').disabled = true;
             document.getElementById('saveFaceBtn').style.display = 'none';
             document.getElementById('retakeFaceBtn').style.display = 'none';
+            document.getElementById('faceApiStatus').style.display = 'none';
+            document.getElementById('faceDetectionFeedback').style.display = 'none';
             capturedImageData = null;
+            capturedFaceDescriptor = null;
+            faceDetectionInterval = null;
             
             document.getElementById('faceRegModal').style.display = 'block';
         }
         
         function closeFaceRegModal() {
             stopFaceCamera();
+            if (faceDetectionInterval) {
+                clearInterval(faceDetectionInterval);
+                faceDetectionInterval = null;
+            }
             document.getElementById('faceRegModal').style.display = 'none';
+        }
+        
+        // Load face-api.js models
+        let faceApiModelsLoaded = false;
+        async function loadFaceApiModels() {
+            if (faceApiModelsLoaded) return true;
+            
+            const statusDiv = document.getElementById('faceApiStatus');
+            const statusText = document.getElementById('faceApiStatusText');
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = 'rgba(59, 130, 246, 0.1)';
+            statusDiv.style.color = '#3b82f6';
+            statusText.textContent = 'Loading face detection models...';
+            
+            try {
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
+                
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                ]);
+                
+                faceApiModelsLoaded = true;
+                statusDiv.style.background = 'rgba(34, 197, 94, 0.1)';
+                statusDiv.style.color = '#22c55e';
+                statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> <span>Face detection models loaded!</span>';
+                
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 2000);
+                
+                return true;
+            } catch (error) {
+                console.error('Error loading face-api models:', error);
+                statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                statusDiv.style.color = '#ef4444';
+                statusDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> <span>Error loading models. Please refresh.</span>';
+                return false;
+            }
         }
         
         async function startFaceCamera() {
             try {
+                // Load face-api models first
+                const modelsLoaded = await loadFaceApiModels();
+                if (!modelsLoaded) {
+                    alert('Failed to load face detection models. Please refresh the page.');
+                    return;
+                }
+                
                 faceStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
                 const video = document.getElementById('faceRegVideo');
                 video.srcObject = faceStream;
                 
+                // Wait for video to be ready
+                await new Promise(resolve => {
+                    video.onloadedmetadata = resolve;
+                });
+                
                 document.getElementById('faceRegOverlay').style.display = 'none';
                 document.getElementById('startCameraBtn').style.display = 'none';
                 document.getElementById('captureFaceBtn').style.display = 'inline-flex';
+                
+                // Start real-time face detection
+                startRealTimeFaceDetection();
+                
             } catch (err) {
                 alert('Unable to access camera. Please ensure camera permissions are granted.');
                 console.error('Camera error:', err);
@@ -1101,29 +1180,120 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 faceStream.getTracks().forEach(track => track.stop());
                 faceStream = null;
             }
+            if (faceDetectionInterval) {
+                clearInterval(faceDetectionInterval);
+                faceDetectionInterval = null;
+            }
         }
         
-        function captureFace() {
+        // Real-time face detection for visual feedback
+        function startRealTimeFaceDetection() {
+            const video = document.getElementById('faceRegVideo');
+            const canvas = document.getElementById('faceDetectionCanvas');
+            const feedback = document.getElementById('faceDetectionFeedback');
+            const captureBtn = document.getElementById('captureFaceBtn');
+            
+            feedback.style.display = 'block';
+            
+            faceDetectionInterval = setInterval(async () => {
+                if (!faceStream) return;
+                
+                try {
+                    const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks();
+                    
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    if (detection) {
+                        // Draw face box
+                        const box = detection.detection.box;
+                        ctx.strokeStyle = '#22c55e';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(box.x, box.y, box.width, box.height);
+                        
+                        feedback.style.background = 'rgba(34, 197, 94, 0.1)';
+                        feedback.style.color = '#22c55e';
+                        feedback.innerHTML = '<i class="fas fa-check-circle"></i> Face detected! Click Capture when ready.';
+                        captureBtn.disabled = false;
+                    } else {
+                        feedback.style.background = 'rgba(245, 158, 11, 0.1)';
+                        feedback.style.color = '#f59e0b';
+                        feedback.innerHTML = '<i class="fas fa-exclamation-triangle"></i> No face detected. Please position your face in view.';
+                        captureBtn.disabled = true;
+                    }
+                } catch (error) {
+                    console.error('Face detection error:', error);
+                }
+            }, 200);
+        }
+        
+        // Capture face with descriptor extraction
+        async function captureFaceWithDescriptor() {
             const video = document.getElementById('faceRegVideo');
             const canvas = document.getElementById('faceRegCanvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            const feedback = document.getElementById('faceDetectionFeedback');
             
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            capturedImageData = canvas.toDataURL('image/jpeg', 0.9);
+            // Stop real-time detection
+            if (faceDetectionInterval) {
+                clearInterval(faceDetectionInterval);
+                faceDetectionInterval = null;
+            }
             
-            // Show captured image
-            video.style.display = 'none';
-            canvas.style.display = 'block';
-            canvas.style.width = '100%';
-            canvas.style.borderRadius = '10px';
+            feedback.style.background = 'rgba(59, 130, 246, 0.1)';
+            feedback.style.color = '#3b82f6';
+            feedback.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting face data...';
             
-            stopFaceCamera();
-            
-            document.getElementById('captureFaceBtn').style.display = 'none';
-            document.getElementById('saveFaceBtn').style.display = 'inline-flex';
-            document.getElementById('retakeFaceBtn').style.display = 'inline-flex';
+            try {
+                // Detect face with full descriptor
+                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+                
+                if (!detection) {
+                    feedback.style.background = 'rgba(239, 68, 68, 0.1)';
+                    feedback.style.color = '#ef4444';
+                    feedback.innerHTML = '<i class="fas fa-times-circle"></i> No face detected. Please try again.';
+                    startRealTimeFaceDetection();
+                    return;
+                }
+                
+                // Store face descriptor (128-dimension Float32Array)
+                capturedFaceDescriptor = Array.from(detection.descriptor);
+                
+                // Capture image
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+                capturedImageData = canvas.toDataURL('image/jpeg', 0.9);
+                
+                // Show captured image
+                video.style.display = 'none';
+                canvas.style.display = 'block';
+                canvas.style.width = '100%';
+                canvas.style.borderRadius = '10px';
+                document.getElementById('faceDetectionCanvas').style.display = 'none';
+                
+                stopFaceCamera();
+                
+                feedback.style.background = 'rgba(34, 197, 94, 0.1)';
+                feedback.style.color = '#22c55e';
+                feedback.innerHTML = '<i class="fas fa-check-circle"></i> Face captured successfully! (128-point descriptor extracted)';
+                
+                document.getElementById('captureFaceBtn').style.display = 'none';
+                document.getElementById('saveFaceBtn').style.display = 'inline-flex';
+                document.getElementById('retakeFaceBtn').style.display = 'inline-flex';
+                
+            } catch (error) {
+                console.error('Error capturing face:', error);
+                feedback.style.background = 'rgba(239, 68, 68, 0.1)';
+                feedback.style.color = '#ef4444';
+                feedback.innerHTML = '<i class="fas fa-times-circle"></i> Error capturing face. Please try again.';
+                startRealTimeFaceDetection();
+            }
         }
         
         function retakeFace() {
@@ -1132,16 +1302,23 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
             
             video.style.display = 'block';
             canvas.style.display = 'none';
+            document.getElementById('faceDetectionCanvas').style.display = 'block';
             capturedImageData = null;
+            capturedFaceDescriptor = null;
             
             document.getElementById('saveFaceBtn').style.display = 'none';
             document.getElementById('retakeFaceBtn').style.display = 'none';
+            document.getElementById('captureFaceBtn').style.display = 'inline-flex';
+            document.getElementById('captureFaceBtn').disabled = true;
             
             startFaceCamera();
         }
         
         async function saveFaceData() {
-            if (!capturedImageData || !currentStudentData) return;
+            if (!capturedImageData || !capturedFaceDescriptor || !currentStudentData) {
+                alert('No face data captured. Please capture face first.');
+                return;
+            }
             
             const btn = document.getElementById('saveFaceBtn');
             btn.disabled = true;
@@ -1151,6 +1328,7 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 const formData = new FormData();
                 formData.append('user_id', currentStudentData.user_id);
                 formData.append('face_image', capturedImageData);
+                formData.append('face_descriptor', JSON.stringify(capturedFaceDescriptor));
                 
                 const response = await fetch('save_face_admin.php', {
                     method: 'POST',
@@ -1160,13 +1338,21 @@ $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert('Face data saved successfully!');
+                    alert('Face data saved successfully! (' + result.descriptor_length + '-point descriptor stored)');
                     currentStudentData.has_face_data = 1;
                     updateFaceRecognitionSection(currentStudentData);
                     closeFaceRegModal();
                 } else {
                     alert(result.message || 'Error saving face data');
                 }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error saving face data');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Save Face Data';
+            }
+        }
             } catch (error) {
                 console.error('Error:', error);
                 alert('Error saving face data');

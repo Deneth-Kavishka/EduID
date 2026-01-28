@@ -540,6 +540,9 @@ foreach (['admin', 'student', 'teacher', 'parent'] as $role) {
                                         </div>
                                         <div class="video-overlay" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 200px; border: 3px dashed #4ade80; border-radius: 50%; pointer-events: none;"></div>
                                     </div>
+                                    <div id="modelLoadingStatus" style="display: none; padding: 0.5rem; margin-bottom: 0.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 6px; text-align: center; color: var(--primary-color); font-size: 0.875rem;">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading face detection models...
+                                    </div>
                                     <button type="button" class="btn btn-primary mt-2" id="startStudentCamera" onclick="startStudentCamera()" style="width: 100%;">
                                         <i class="fas fa-camera"></i> Start Camera
                                     </button>
@@ -924,7 +927,8 @@ foreach (['admin', 'student', 'teacher', 'parent'] as $role) {
         }
     </style>
     
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <!-- Use vladmandic face-api fork which includes both library and models -->
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
     <script src="../../assets/js/theme.js"></script>
     <script>
         let studentVideoStream = null;
@@ -934,9 +938,10 @@ foreach (['admin', 'student', 'teacher', 'parent'] as $role) {
         
         // Load Face-API models
         async function loadFaceModels() {
-            const MODEL_URL = '../../assets/models';
+            // Use matching CDN for vladmandic face-api models
+            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
             try {
-                console.log('Loading face detection models...');
+                console.log('Loading face detection models from CDN...');
                 
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -1027,6 +1032,14 @@ foreach (['admin', 'student', 'teacher', 'parent'] as $role) {
             console.log('startStudentCamera() called');
             
             try {
+                // Show loading status if models not loaded
+                const modelStatus = document.getElementById('modelLoadingStatus');
+                if (!modelsLoaded) {
+                    modelStatus.style.display = 'block';
+                    await loadFaceModels();
+                    modelStatus.style.display = 'none';
+                }
+                
                 updateFaceStatus('Requesting camera access...', 'info');
                 
                 const video = document.getElementById('studentVideo');

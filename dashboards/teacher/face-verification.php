@@ -57,8 +57,8 @@ $all_face_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Face-API.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <!-- Face-API.js - Using vladmandic fork for better compatibility -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
 </head>
 <body>
     <div class="dashboard">
@@ -611,7 +611,8 @@ $all_face_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             showStatus('Loading face detection models...', 'info');
             
             try {
-                const MODEL_URL = '../../assets/models';
+                // Use CDN for consistent model loading with vladmandic face-api
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
                 
                 // Load models with progress simulation
                 const models = [

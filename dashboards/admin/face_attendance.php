@@ -10,14 +10,16 @@ $selected_section = $_GET['section'] ?? '';
 $selected_date = $_GET['date'] ?? date('Y-m-d');
 $today = date('Y-m-d');
 
-// Get unique grades (with proper numeric ordering)
-$query = "SELECT DISTINCT s.grade FROM students s 
+// Get unique grades (with proper numeric ordering, trimmed)
+$query = "SELECT DISTINCT TRIM(s.grade) as grade FROM students s 
           JOIN users u ON s.user_id = u.user_id 
-          WHERE u.status = 'active' 
-          ORDER BY CAST(s.grade AS UNSIGNED), s.grade";
+          WHERE u.status = 'active' AND s.grade IS NOT NULL AND TRIM(s.grade) != ''
+          ORDER BY CAST(TRIM(s.grade) AS UNSIGNED), TRIM(s.grade)";
 $stmt = $conn->prepare($query);
 $stmt->execute();
 $grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
+// Remove any remaining duplicates (case-insensitive)
+$grades = array_values(array_unique(array_map('trim', $grades)));
 
 // Get sections for selected grade (only with active students)
 $sections = [];
@@ -47,12 +49,12 @@ if ($selected_date) {
 // Get students with face data for selected class
 $students_with_face = [];
 if ($selected_grade) {
-    $where = "s.grade = :grade AND u.status = 'active'";
-    $params = [':grade' => $selected_grade];
+    $where = "TRIM(s.grade) = :grade AND u.status = 'active'";
+    $params = [':grade' => trim($selected_grade)];
     
     if ($selected_section) {
-        $where .= " AND s.class_section = :section";
-        $params[':section'] = $selected_section;
+        $where .= " AND TRIM(s.class_section) = :section";
+        $params[':section'] = trim($selected_section);
     }
     
     $query = "SELECT s.student_id, s.student_number, s.first_name, s.last_name, s.grade, s.class_section, s.user_id,
@@ -81,7 +83,8 @@ if ($selected_grade) {
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <!-- Use vladmandic face-api fork for better compatibility -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
 </head>
 <body>
     <div class="dashboard">
@@ -271,7 +274,10 @@ if ($selected_grade) {
                     <div class="card">
                         <div class="card-header">
                             <h3 class="card-title"><i class="fas fa-video"></i> Camera Feed</h3>
-                            <div style="display: flex; gap: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span id="faceCountBadge" style="display: none; padding: 0.25rem 0.75rem; background: rgba(34, 197, 94, 0.1); color: var(--success-color); border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                    <i class="fas fa-user-check"></i> <span id="faceCountNumber">0</span> faces loaded
+                                </span>
                                 <button id="startCameraBtn" class="btn btn-primary" onclick="startCamera()">
                                     <i class="fas fa-play"></i> Start Camera
                                 </button>
@@ -282,7 +288,7 @@ if ($selected_grade) {
                         </div>
                         <div class="card-body" style="padding: 1.5rem;">
                             <div id="cameraContainer" style="position: relative; width: 100%; aspect-ratio: 4/3; background: #1a1a2e; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                                <video id="videoElement" autoplay muted style="width: 100%; height: 100%; object-fit: cover; display: none;"></video>
+                                <video id="videoElement" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; display: none;"></video>
                                 <canvas id="canvasOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;"></canvas>
                                 <div id="cameraPlaceholder" style="text-align: center; color: #666;">
                                     <i class="fas fa-camera" style="font-size: 4rem; margin-bottom: 1rem;"></i>
@@ -457,17 +463,58 @@ if ($selected_grade) {
         async function loadKnownFaces() {
             // Fetch stored face descriptors for students in this class
             try {
+                console.log('Loading known faces...');
                 const response = await fetch(`face_attendance_handler.php?action=get_face_data&grade=<?php echo urlencode($selected_grade); ?>&section=<?php echo urlencode($selected_section); ?>`);
                 const data = await response.json();
                 
-                if (data.success) {
-                    knownFaces = data.faces.map(f => ({
-                        student_id: f.student_id,
-                        student_name: f.student_name,
-                        student_number: f.student_number,
-                        descriptor: new Float32Array(JSON.parse(f.face_descriptor))
-                    }));
-                    console.log(`Loaded ${knownFaces.length} known faces`);
+                if (data.success && data.faces) {
+                    knownFaces = [];
+                    for (const f of data.faces) {
+                        try {
+                            // Parse face descriptor
+                            const descriptorArray = JSON.parse(f.face_descriptor);
+                            if (Array.isArray(descriptorArray) && descriptorArray.length >= 128) {
+                                knownFaces.push({
+                                    student_id: f.student_id,
+                                    student_name: f.student_name,
+                                    student_number: f.student_number,
+                                    descriptor: new Float32Array(descriptorArray)
+                                });
+                            } else {
+                                console.warn(`Invalid descriptor for student ${f.student_id}:`, descriptorArray);
+                            }
+                        } catch (parseError) {
+                            console.error(`Error parsing descriptor for student ${f.student_id}:`, parseError);
+                        }
+                    }
+                    console.log(`✓ Loaded ${knownFaces.length} known faces for recognition`);
+                    
+                    // Update UI badge
+                    const badge = document.getElementById('faceCountBadge');
+                    const countNumber = document.getElementById('faceCountNumber');
+                    if (badge && countNumber) {
+                        countNumber.textContent = knownFaces.length;
+                        badge.style.display = knownFaces.length > 0 ? 'inline-block' : 'none';
+                        if (knownFaces.length === 0) {
+                            badge.style.background = 'rgba(239, 68, 68, 0.1)';
+                            badge.style.color = 'var(--danger-color)';
+                            badge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> No faces registered';
+                            badge.style.display = 'inline-block';
+                        }
+                    }
+                    
+                    // Update loading indicator
+                    const statusElement = document.getElementById('loadingIndicator');
+                    if (statusElement) {
+                        if (knownFaces.length > 0) {
+                            statusElement.innerHTML = `<p style="color: var(--success-color);"><i class="fas fa-check-circle"></i> ${knownFaces.length} registered faces loaded</p>`;
+                        } else {
+                            statusElement.innerHTML = `<p style="color: var(--warning-color);"><i class="fas fa-exclamation-triangle"></i> No face data found. Please register student faces first.</p>`;
+                        }
+                        setTimeout(() => { statusElement.style.display = 'none'; }, 5000);
+                    }
+                } else {
+                    console.log('No face data found or error in response:', data);
                 }
             } catch (error) {
                 console.error('Error loading known faces:', error);
@@ -476,8 +523,11 @@ if ($selected_grade) {
         
         async function startCamera() {
             try {
+                console.log('Starting camera...');
+                
                 // Load models first if not loaded
                 if (!faceApiLoaded) {
+                    console.log('Loading face API models first...');
                     await loadFaceApiModels();
                 }
                 
@@ -485,17 +535,37 @@ if ($selected_grade) {
                 const placeholder = document.getElementById('cameraPlaceholder');
                 const canvas = document.getElementById('canvasOverlay');
                 
+                console.log('Requesting camera access...');
                 videoStream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: 640, height: 480, facingMode: 'user' }
+                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
                 });
                 
                 video.srcObject = videoStream;
+                
+                // Wait for video to be ready
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        console.log('Video metadata loaded');
+                        video.play().then(() => {
+                            console.log('Video playing');
+                            resolve();
+                        }).catch(e => {
+                            console.error('Video play error:', e);
+                            resolve();
+                        });
+                    };
+                    // Fallback timeout
+                    setTimeout(resolve, 3000);
+                });
+                
                 video.style.display = 'block';
                 canvas.style.display = 'block';
                 placeholder.style.display = 'none';
                 
                 document.getElementById('startCameraBtn').style.display = 'none';
                 document.getElementById('stopCameraBtn').style.display = 'inline-flex';
+                
+                console.log(`Camera ready. Known faces: ${knownFaces.length}`);
                 
                 // Start face detection loop
                 isScanning = true;
@@ -534,16 +604,27 @@ if ($selected_grade) {
             const canvas = document.getElementById('canvasOverlay');
             const ctx = canvas.getContext('2d');
             
+            // Check if video is ready
+            if (video.readyState !== video.HAVE_ENOUGH_DATA || video.videoWidth === 0) {
+                requestAnimationFrame(detectFaces);
+                return;
+            }
+            
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             
             try {
-                const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+                const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
                     .withFaceLandmarks()
                     .withFaceDescriptors();
                 
                 // Clear canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Always show status
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.font = 'bold 14px Inter, sans-serif';
+                ctx.fillText(`Scanning... | Faces: ${detections.length} | Known: ${knownFaces.length}`, 10, 25);
                 
                 // Draw detections
                 for (const detection of detections) {
@@ -566,13 +647,19 @@ if ($selected_grade) {
                     ctx.lineWidth = 3;
                     ctx.strokeRect(box.x, box.y, box.width, box.height);
                     
-                    // Draw label
+                    // Draw label background
+                    const label = match ? `${match.student_name} (${Math.round((1 - minDistance) * 100)}%)` : 'Unknown';
+                    ctx.font = 'bold 16px Inter, sans-serif';
+                    const textWidth = ctx.measureText(label).width;
+                    ctx.fillStyle = match ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)';
+                    ctx.fillRect(box.x, box.y - 25, textWidth + 10, 22);
+                    
+                    // Draw label text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(label, box.x + 5, box.y - 8);
+                    
+                    // Auto mark attendance if matched
                     if (match) {
-                        ctx.fillStyle = '#22c55e';
-                        ctx.font = '16px Inter, sans-serif';
-                        ctx.fillText(match.student_name, box.x, box.y - 10);
-                        
-                        // Mark attendance
                         markFaceAttendance(match);
                     }
                 }
@@ -585,15 +672,21 @@ if ($selected_grade) {
         }
         
         let recentlyMarked = new Set();
+        let markedStudents = new Set(); // Track students already marked for this session
         
         async function markFaceAttendance(student) {
-            // Prevent duplicate marking within 5 seconds
+            // Prevent duplicate marking within 10 seconds
             if (recentlyMarked.has(student.student_id)) return;
             
+            // Prevent re-marking already marked students
+            if (markedStudents.has(student.student_id)) return;
+            
             recentlyMarked.add(student.student_id);
-            setTimeout(() => recentlyMarked.delete(student.student_id), 5000);
+            setTimeout(() => recentlyMarked.delete(student.student_id), 10000);
             
             try {
+                console.log(`Marking attendance for: ${student.student_name} (ID: ${student.student_id})`);
+                
                 const response = await fetch('face_attendance_handler.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -607,15 +700,28 @@ if ($selected_grade) {
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Update UI
+                    console.log(`✓ Attendance marked for ${student.student_name}`);
+                    
+                    // Add to marked students so we don't re-mark
+                    markedStudents.add(student.student_id);
+                    
+                    // Update UI - find and update the student row
                     const row = document.getElementById(`student-row-${student.student_id}`);
                     if (row) {
                         const statusCell = row.querySelector('td:last-child');
-                        statusCell.innerHTML = '<span style="color: var(--success-color); font-size: 0.75rem; font-weight: 600;">Present</span>';
+                        statusCell.innerHTML = '<span style="color: var(--success-color); font-weight: 600;"><i class="fas fa-check-circle"></i> Present</span>';
+                        row.style.background = 'rgba(34, 197, 94, 0.1)';
                     }
                     
-                    // Show recognition result
+                    // Show recognition result with animation
                     showRecognitionResult(student, result.time);
+                    
+                    // Play success sound (if available)
+                    try {
+                        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQkLQKDZzZFNBQI1mL7PxZVjTGaJk31kQzdQT1NJQ0VNUltnc4WWoZyPfmpZT0xMT1NfbYKSnqGcj315dXJycHJzdoGMk5udn52bm5yblY6IgHdxbGpubXF3f4eNkJGQj46PkpWVlZKNiIR+d3Bua25wdn2Dh4uNjo+PkZOXmpuamJSQi4R9dnFtbW5wdHt/goeLjo6QkpSYmpubmJaUkIyCenVxbWttb3N3fIGGi42Oj5KVmJqbmpmWk4+LhX15dXJxcnR3fYOHioyNjpGSlZeZmpqZl5SQjYeDf3p3dHR1d3t/g4eKi42OkJKVl5mampqYlpOPi4eDf3t4dnZ3en2Bg4aIioqMj5GUlpmampqZl5WRjoqGgn97eXh3eHt+gYOGiImLjo+SlJaYmpqampqYlZKOioaDf3t5eHh5fH6BhIeJiouNj5KUlpiZmpqamZeVko6LhoJ/fHp5eXp8f4GEh4mLjI6PkZSWl5mZmZqZmJWTkIyIhYF9e3l5eXp9f4GEhomLjI6PkZSWl5mZmZmZmJaUkY2Jhn99e3l4eXp8f4KFh4mLjI6QkpSWl5iZmJmYl5WTj4uHg398eXd4eXt9gIOGiIqMjY+RlJaYmZmZmZiXlZKOioaAfnp4eHh6fH+Cg4aIioyNj5GTlpeZmZmZmJeVko+Kh4F+e3l4eHl7foCDhoiKjI2PkZSWl5iZmZmYl5WTj4uHgn57eXh4eXt9f4KFh4mLjY6QkpSWl5iZmZmYl5WTj4uHg397eXh4eXt9f4KFh4mLjY6QkpSWl5iZmZmYl5WSj4qGgn56eHd4eXt9gIOFh4mLjY6QkpSWl5iZmZmYl5WSj4qGgn56eHd4eXt9gIOFh4mLjY6QkpSWl5iZmZiYl5WSj4qGgn56eHd4eXt9gIOFh4mLjY6QkpSWl5iZmZmYl5WSj4qGgn56');
+                        audio.volume = 0.3;
+                        audio.play().catch(() => {});
+                    } catch (e) {}
                 }
             } catch (error) {
                 console.error('Error marking attendance:', error);

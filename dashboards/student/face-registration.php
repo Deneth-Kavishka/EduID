@@ -449,8 +449,8 @@ $face_registered = $stmt->fetch(PDO::FETCH_ASSOC);
         </main>
     </div>
     
-    <!-- Face API JS Library -->
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <!-- Face API JS Library - Using vladmandic fork for better compatibility -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
     <script src="../../assets/js/theme.js"></script>
     <script src="../../assets/js/face-recognition.js"></script>
     <script>
@@ -492,7 +492,7 @@ $face_registered = $stmt->fetch(PDO::FETCH_ASSOC);
             if (modelsLoaded) return true;
             
             try {
-                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
                 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
                 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
                 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);

@@ -41,7 +41,9 @@ async function loadModels() {
   try {
     showStatus("Loading face detection models...", "info");
 
-    const MODEL_URL = "../../assets/models";
+    // Use CDN for consistent model loading with vladmandic face-api
+    const MODEL_URL =
+      "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model";
 
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),

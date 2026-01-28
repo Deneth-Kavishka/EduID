@@ -80,6 +80,8 @@ $admin = $stmt->fetch(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Use vladmandic face-api fork for better compatibility -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
 </head>
 <body>
     <div class="dashboard">
@@ -408,71 +410,138 @@ $admin = $stmt->fetch(PDO::FETCH_ASSOC);
     
     <!-- Add Student Modal -->
     <div id="addStudentModal" class="modal-overlay" style="display: none;">
-        <div class="modal-container" style="max-width: 600px;">
+        <div class="modal-container" style="max-width: 650px;">
             <div class="modal-header">
                 <h3><i class="fas fa-user-plus" style="color: var(--primary-color);"></i> Add New Student</h3>
                 <button class="modal-close" onclick="closeModal('addStudentModal')">&times;</button>
             </div>
-            <form id="addStudentForm" method="POST" action="students.php">
+            <form id="addStudentForm" onsubmit="return handleAddStudentSubmit(event)">
                 <input type="hidden" name="action" value="add_student">
                 <div class="modal-body" style="padding: 1.5rem;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label>First Name <span style="color: #ef4444;">*</span></label>
-                            <input type="text" name="first_name" required placeholder="Enter first name">
+                    <!-- Step indicator / Tabs -->
+                    <div id="addStudentSteps" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+                        <div class="step-item active" data-step="1" onclick="switchToStep(1)" style="flex: 1; text-align: center; padding: 0.5rem; border-radius: 8px; background: rgba(59, 130, 246, 0.1); border: 2px solid var(--primary-color); cursor: pointer; transition: all 0.2s;">
+                            <i class="fas fa-user"></i> Student Info
                         </div>
-                        <div class="form-group">
-                            <label>Last Name <span style="color: #ef4444;">*</span></label>
-                            <input type="text" name="last_name" required placeholder="Enter last name">
-                        </div>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label>Email <span style="color: #ef4444;">*</span></label>
-                            <input type="email" name="email" required placeholder="student@email.com">
-                        </div>
-                        <div class="form-group">
-                            <label>Student ID <span style="color: #ef4444;">*</span></label>
-                            <input type="text" name="student_id" required placeholder="e.g., STU2024001">
+                        <div class="step-item" data-step="2" onclick="switchToStep(2)" style="flex: 1; text-align: center; padding: 0.5rem; border-radius: 8px; background: var(--bg-secondary); border: 2px solid var(--border-color); cursor: pointer; transition: all 0.2s;">
+                            <i class="fas fa-camera"></i> Face Registration
                         </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label>Date of Birth</label>
-                            <input type="date" name="date_of_birth">
+                    
+                    <!-- Step 1: Student Info -->
+                    <div id="studentInfoStep">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label>First Name <span style="color: #ef4444;">*</span></label>
+                                <input type="text" name="first_name" id="add_first_name" required placeholder="Enter first name">
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name <span style="color: #ef4444;">*</span></label>
+                                <input type="text" name="last_name" id="add_last_name" required placeholder="Enter last name">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label>Email <span style="color: #ef4444;">*</span></label>
+                                <input type="email" name="email" required placeholder="student@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Student ID <span style="color: #ef4444;">*</span></label>
+                                <input type="text" name="student_id" required placeholder="e.g., STU2024001">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label>Date of Birth</label>
+                                <input type="date" name="date_of_birth">
+                            </div>
+                            <div class="form-group">
+                                <label>Gender</label>
+                                <select name="gender">
+                                    <option value="">Select Gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label>Grade/Class</label>
+                                <input type="text" name="grade" placeholder="e.g., Grade 10">
+                            </div>
+                            <div class="form-group">
+                                <label>Section</label>
+                                <input type="text" name="section" placeholder="e.g., A">
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label>Gender</label>
-                            <select name="gender">
-                                <option value="">Select Gender</option>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                                <option value="other">Other</option>
-                            </select>
+                            <label>Phone Number</label>
+                            <input type="tel" name="phone" placeholder="+94 XX XXX XXXX">
+                        </div>
+                        <div class="form-group">
+                            <label>Password <span style="color: #ef4444;">*</span></label>
+                            <input type="password" name="password" required placeholder="Create a password" minlength="6">
                         </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label>Grade/Class</label>
-                            <input type="text" name="grade" placeholder="e.g., Grade 10">
+                    
+                    <!-- Step 2: Face Registration (hidden initially) -->
+                    <div id="faceRegistrationStep" style="display: none;">
+                        <div id="newStudentInfo" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;" id="newStudentAvatar">ST</div>
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-primary);" id="newStudentName">Student Name</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">Student created successfully!</div>
+                            </div>
+                            <i class="fas fa-check-circle" style="color: #22c55e; margin-left: auto; font-size: 1.25rem;"></i>
                         </div>
-                        <div class="form-group">
-                            <label>Section</label>
-                            <input type="text" name="section" placeholder="e.g., A">
+                        
+                        <!-- Face API Status -->
+                        <div id="addFaceApiStatus" style="margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px; text-align: center; display: none;">
+                            <i class="fas fa-spinner fa-spin"></i> <span id="addFaceApiStatusText">Loading face detection models...</span>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Phone Number</label>
-                        <input type="tel" name="phone" placeholder="+94 XX XXX XXXX">
-                    </div>
-                    <div class="form-group">
-                        <label>Password <span style="color: #ef4444;">*</span></label>
-                        <input type="password" name="password" required placeholder="Create a password" minlength="6">
+                        
+                        <div style="position: relative; width: 100%; max-width: 350px; margin: 0 auto;">
+                            <video id="addFaceVideo" style="width: 100%; border-radius: 10px; background: #000;" autoplay playsinline></video>
+                            <canvas id="addFaceCanvas" style="display: none;"></canvas>
+                            <canvas id="addFaceDetectionCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+                            <div id="addFaceOverlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); border-radius: 10px;">
+                                <div style="text-align: center; color: white;">
+                                    <i class="fas fa-video" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                                    <p>Click "Start Camera" to register face</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Face Detection Feedback -->
+                        <div id="addFaceDetectionFeedback" style="margin-top: 0.75rem; padding: 0.5rem; border-radius: 8px; text-align: center; font-size: 0.85rem; display: none;">
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 1rem;">
+                            <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                                <button type="button" id="addStartCameraBtn" class="btn btn-primary" onclick="startAddFaceCamera()" style="padding: 0.5rem 1rem;">
+                                    <i class="fas fa-video"></i> Start Camera
+                                </button>
+                                <button type="button" id="addCaptureFaceBtn" class="btn btn-primary" onclick="captureAddFace()" style="padding: 0.5rem 1rem; display: none;" disabled>
+                                    <i class="fas fa-camera"></i> Capture Face
+                                </button>
+                                <button type="button" id="addSaveFaceBtn" class="btn" onclick="saveAddFaceData()" style="padding: 0.5rem 1rem; display: none; background: #22c55e; color: white;">
+                                    <i class="fas fa-save"></i> Save Face Data
+                                </button>
+                                <button type="button" id="addRetakeFaceBtn" class="btn btn-secondary" onclick="retakeAddFace()" style="padding: 0.5rem 1rem; display: none;">
+                                    <i class="fas fa-redo"></i> Retake
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addStudentModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add Student</button>
+                    <button type="button" id="skipFaceBtn" class="btn btn-secondary" onclick="skipFaceRegistration()" style="display: none;">
+                        <i class="fas fa-forward"></i> Skip Face Registration
+                    </button>
+                    <button type="submit" id="addStudentSubmitBtn" class="btn btn-primary"><i class="fas fa-plus"></i> Add Student</button>
+                    <button type="button" id="finishAddStudentBtn" class="btn btn-primary" onclick="finishAddStudent()" style="display: none;"><i class="fas fa-check"></i> Finish</button>
                 </div>
             </form>
         </div>
@@ -728,7 +797,122 @@ $admin = $stmt->fetch(PDO::FETCH_ASSOC);
     
     <script src="../../assets/js/theme.js"></script>
     <script>
+        // Variables for face registration
+        let addFaceStream = null;
+        let addCapturedImageData = null;
+        let addCapturedFaceDescriptor = null;
+        let addFaceDetectionInterval = null;
+        let addFaceApiModelsLoaded = false;
+        let newStudentUserId = null;
+        let currentStep = 1;
+        
+        // Switch between tabs
+        function switchToStep(step) {
+            currentStep = step;
+            
+            // Update tab appearance
+            document.querySelectorAll('#addStudentSteps .step-item').forEach((tabEl, i) => {
+                if (i + 1 === step) {
+                    tabEl.style.background = 'rgba(59, 130, 246, 0.1)';
+                    tabEl.style.borderColor = 'var(--primary-color)';
+                    tabEl.style.opacity = '1';
+                } else {
+                    tabEl.style.background = 'var(--bg-secondary)';
+                    tabEl.style.borderColor = 'var(--border-color)';
+                    tabEl.style.opacity = '0.7';
+                }
+            });
+            
+            // Show/hide step content
+            if (step === 1) {
+                document.getElementById('studentInfoStep').style.display = 'block';
+                document.getElementById('faceRegistrationStep').style.display = 'none';
+                document.getElementById('addStudentSubmitBtn').style.display = 'inline-flex';
+                
+                // Reset skip button for next use
+                const skipBtn = document.getElementById('skipFaceBtn');
+                skipBtn.style.display = 'none';
+                skipBtn.innerHTML = '<i class="fas fa-forward"></i> Skip Face Registration';
+                skipBtn.onclick = skipFaceRegistration;
+                
+                document.getElementById('finishAddStudentBtn').style.display = 'none';
+            } else if (step === 2) {
+                document.getElementById('studentInfoStep').style.display = 'none';
+                document.getElementById('faceRegistrationStep').style.display = 'block';
+                
+                const skipBtn = document.getElementById('skipFaceBtn');
+                
+                if (newStudentUserId) {
+                    // Student already created, show skip/finish buttons
+                    document.getElementById('addStudentSubmitBtn').style.display = 'none';
+                    skipBtn.style.display = 'inline-flex';
+                    skipBtn.innerHTML = '<i class="fas fa-forward"></i> Skip Face Registration';
+                    skipBtn.onclick = skipFaceRegistration;
+                } else {
+                    // Preview mode - show message that student needs to be created first
+                    document.getElementById('newStudentName').textContent = 'Create student first';
+                    document.getElementById('newStudentAvatar').textContent = '?';
+                    const checkIcon = document.getElementById('newStudentInfo').querySelector('.fa-check-circle');
+                    if (checkIcon) checkIcon.remove();
+                    
+                    document.getElementById('addStudentSubmitBtn').style.display = 'none';
+                    skipBtn.style.display = 'inline-flex';
+                    skipBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Student Info';
+                    skipBtn.onclick = function() { switchToStep(1); };
+                }
+                
+                // Reset face registration UI
+                resetFaceRegistrationUI();
+            }
+        }
+        
+        function resetFaceRegistrationUI() {
+            stopAddFaceCamera();
+            document.getElementById('addFaceOverlay').style.display = 'flex';
+            document.getElementById('addStartCameraBtn').style.display = 'inline-flex';
+            document.getElementById('addCaptureFaceBtn').style.display = 'none';
+            document.getElementById('addSaveFaceBtn').style.display = 'none';
+            document.getElementById('addRetakeFaceBtn').style.display = 'none';
+            document.getElementById('addFaceApiStatus').style.display = 'none';
+            document.getElementById('addFaceDetectionFeedback').style.display = 'none';
+            const video = document.getElementById('addFaceVideo');
+            const canvas = document.getElementById('addFaceCanvas');
+            if (video) video.style.display = 'block';
+            if (canvas) canvas.style.display = 'none';
+            addCapturedImageData = null;
+            addCapturedFaceDescriptor = null;
+        }
+        
         function openAddStudentModal() {
+            // Reset to step 1
+            currentStep = 1;
+            document.getElementById('studentInfoStep').style.display = 'block';
+            document.getElementById('faceRegistrationStep').style.display = 'none';
+            document.getElementById('addStudentSubmitBtn').style.display = 'inline-flex';
+            document.getElementById('skipFaceBtn').style.display = 'none';
+            document.getElementById('finishAddStudentBtn').style.display = 'none';
+            document.getElementById('addStudentForm').reset();
+            
+            // Reset step indicators
+            document.querySelectorAll('#addStudentSteps .step-item').forEach((step, i) => {
+                if (i === 0) {
+                    step.style.background = 'rgba(59, 130, 246, 0.1)';
+                    step.style.borderColor = 'var(--primary-color)';
+                    step.style.opacity = '1';
+                } else {
+                    step.style.background = 'var(--bg-secondary)';
+                    step.style.borderColor = 'var(--border-color)';
+                    step.style.opacity = '0.7';
+                }
+            });
+            
+            // Reset skip button
+            document.getElementById('skipFaceBtn').textContent = '';
+            document.getElementById('skipFaceBtn').innerHTML = '<i class="fas fa-forward"></i> Skip Face Registration';
+            document.getElementById('skipFaceBtn').onclick = skipFaceRegistration;
+            
+            newStudentUserId = null;
+            
             document.getElementById('addStudentModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
         }
@@ -744,14 +928,375 @@ $admin = $stmt->fetch(PDO::FETCH_ASSOC);
         }
         
         function closeModal(modalId) {
+            if (modalId === 'addStudentModal') {
+                stopAddFaceCamera();
+            }
             document.getElementById(modalId).style.display = 'none';
             document.body.style.overflow = '';
+        }
+        
+        // Handle add student form submission
+        async function handleAddStudentSubmit(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const submitBtn = document.getElementById('addStudentSubmitBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+            
+            try {
+                const formData = new FormData(form);
+                formData.append('action', 'add_student');
+                
+                const response = await fetch('add_user_handler.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    newStudentUserId = result.user_id;
+                    
+                    // Move to step 2 - Face Registration
+                    goToFaceRegistrationStep(formData.get('first_name'), formData.get('last_name'));
+                } else {
+                    alert(result.message || 'Error adding student');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error adding student. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+        
+        function goToFaceRegistrationStep(firstName, lastName) {
+            currentStep = 2;
+            
+            // Update step indicators
+            document.querySelectorAll('#addStudentSteps .step-item').forEach((step, i) => {
+                if (i === 0) {
+                    step.style.background = 'rgba(34, 197, 94, 0.1)';
+                    step.style.borderColor = '#22c55e';
+                    step.innerHTML = '<i class="fas fa-check"></i> Student Info';
+                } else {
+                    step.style.background = 'rgba(59, 130, 246, 0.1)';
+                    step.style.borderColor = 'var(--primary-color)';
+                    step.style.opacity = '1';
+                }
+            });
+            
+            // Show student info
+            document.getElementById('newStudentName').textContent = `${firstName} ${lastName}`;
+            document.getElementById('newStudentAvatar').textContent = (firstName[0] + lastName[0]).toUpperCase();
+            
+            // Ensure check icon is present
+            const infoDiv = document.getElementById('newStudentInfo');
+            if (!infoDiv.querySelector('.fa-check-circle')) {
+                const checkIcon = document.createElement('i');
+                checkIcon.className = 'fas fa-check-circle';
+                checkIcon.style.cssText = 'color: #22c55e; margin-left: auto; font-size: 1.25rem;';
+                infoDiv.appendChild(checkIcon);
+            }
+            
+            // Switch to face registration step
+            document.getElementById('studentInfoStep').style.display = 'none';
+            document.getElementById('faceRegistrationStep').style.display = 'block';
+            
+            // Update buttons - reset skip button properly
+            document.getElementById('addStudentSubmitBtn').style.display = 'none';
+            const skipBtn = document.getElementById('skipFaceBtn');
+            skipBtn.style.display = 'inline-flex';
+            skipBtn.innerHTML = '<i class="fas fa-forward"></i> Skip Face Registration';
+            skipBtn.onclick = skipFaceRegistration;
+            document.getElementById('finishAddStudentBtn').style.display = 'none';
+            
+            // Reset face registration UI
+            resetFaceRegistrationUI();
+        }
+        
+        function skipFaceRegistration() {
+            stopAddFaceCamera();
+            closeModal('addStudentModal');
+            alert('Student added successfully! Face registration skipped.');
+            location.reload();
+        }
+        
+        function finishAddStudent() {
+            closeModal('addStudentModal');
+            location.reload();
+        }
+        
+        // Load face-api.js models
+        async function loadAddFaceApiModels() {
+            if (addFaceApiModelsLoaded) return true;
+            
+            const statusDiv = document.getElementById('addFaceApiStatus');
+            const statusText = document.getElementById('addFaceApiStatusText');
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = 'rgba(59, 130, 246, 0.1)';
+            statusDiv.style.color = '#3b82f6';
+            statusText.textContent = 'Loading face detection models...';
+            
+            try {
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
+                
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                ]);
+                
+                addFaceApiModelsLoaded = true;
+                statusDiv.style.background = 'rgba(34, 197, 94, 0.1)';
+                statusDiv.style.color = '#22c55e';
+                statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> <span>Face detection models loaded!</span>';
+                
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 2000);
+                
+                return true;
+            } catch (error) {
+                console.error('Error loading face-api models:', error);
+                statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                statusDiv.style.color = '#ef4444';
+                statusDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> <span>Error loading models. Please refresh.</span>';
+                return false;
+            }
+        }
+        
+        async function startAddFaceCamera() {
+            try {
+                // Load face-api models first
+                const modelsLoaded = await loadAddFaceApiModels();
+                if (!modelsLoaded) {
+                    alert('Failed to load face detection models. Please refresh the page.');
+                    return;
+                }
+                
+                addFaceStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+                const video = document.getElementById('addFaceVideo');
+                video.srcObject = addFaceStream;
+                
+                // Wait for video to be ready
+                await new Promise(resolve => {
+                    video.onloadedmetadata = resolve;
+                });
+                
+                document.getElementById('addFaceOverlay').style.display = 'none';
+                document.getElementById('addStartCameraBtn').style.display = 'none';
+                document.getElementById('addCaptureFaceBtn').style.display = 'inline-flex';
+                
+                // Start real-time face detection
+                startAddRealTimeFaceDetection();
+                
+            } catch (err) {
+                alert('Unable to access camera. Please ensure camera permissions are granted.');
+                console.error('Camera error:', err);
+            }
+        }
+        
+        function stopAddFaceCamera() {
+            if (addFaceStream) {
+                addFaceStream.getTracks().forEach(track => track.stop());
+                addFaceStream = null;
+            }
+            if (addFaceDetectionInterval) {
+                clearInterval(addFaceDetectionInterval);
+                addFaceDetectionInterval = null;
+            }
+        }
+        
+        function startAddRealTimeFaceDetection() {
+            const video = document.getElementById('addFaceVideo');
+            const canvas = document.getElementById('addFaceDetectionCanvas');
+            const feedback = document.getElementById('addFaceDetectionFeedback');
+            const captureBtn = document.getElementById('addCaptureFaceBtn');
+            
+            feedback.style.display = 'block';
+            
+            addFaceDetectionInterval = setInterval(async () => {
+                if (!addFaceStream) return;
+                
+                try {
+                    const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks();
+                    
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    if (detection) {
+                        // Draw face box
+                        const box = detection.detection.box;
+                        ctx.strokeStyle = '#22c55e';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(box.x, box.y, box.width, box.height);
+                        
+                        feedback.style.background = 'rgba(34, 197, 94, 0.1)';
+                        feedback.style.color = '#22c55e';
+                        feedback.innerHTML = '<i class="fas fa-check-circle"></i> Face detected! Click Capture when ready.';
+                        captureBtn.disabled = false;
+                    } else {
+                        feedback.style.background = 'rgba(245, 158, 11, 0.1)';
+                        feedback.style.color = '#f59e0b';
+                        feedback.innerHTML = '<i class="fas fa-exclamation-triangle"></i> No face detected. Please position your face in view.';
+                        captureBtn.disabled = true;
+                    }
+                } catch (error) {
+                    console.error('Face detection error:', error);
+                }
+            }, 200);
+        }
+        
+        async function captureAddFace() {
+            const video = document.getElementById('addFaceVideo');
+            const canvas = document.getElementById('addFaceCanvas');
+            const feedback = document.getElementById('addFaceDetectionFeedback');
+            
+            // Stop real-time detection
+            if (addFaceDetectionInterval) {
+                clearInterval(addFaceDetectionInterval);
+                addFaceDetectionInterval = null;
+            }
+            
+            feedback.style.background = 'rgba(59, 130, 246, 0.1)';
+            feedback.style.color = '#3b82f6';
+            feedback.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extracting face data...';
+            
+            try {
+                // Detect face with full descriptor
+                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+                
+                if (!detection) {
+                    feedback.style.background = 'rgba(239, 68, 68, 0.1)';
+                    feedback.style.color = '#ef4444';
+                    feedback.innerHTML = '<i class="fas fa-times-circle"></i> No face detected. Please try again.';
+                    startAddRealTimeFaceDetection();
+                    return;
+                }
+                
+                // Store face descriptor (128-dimension Float32Array)
+                addCapturedFaceDescriptor = Array.from(detection.descriptor);
+                
+                // Capture image
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+                addCapturedImageData = canvas.toDataURL('image/jpeg', 0.9);
+                
+                // Show captured image
+                video.style.display = 'none';
+                canvas.style.display = 'block';
+                canvas.style.width = '100%';
+                canvas.style.borderRadius = '10px';
+                document.getElementById('addFaceDetectionCanvas').style.display = 'none';
+                
+                stopAddFaceCamera();
+                
+                feedback.style.background = 'rgba(34, 197, 94, 0.1)';
+                feedback.style.color = '#22c55e';
+                feedback.innerHTML = '<i class="fas fa-check-circle"></i> Face captured successfully! (128-point descriptor extracted)';
+                
+                document.getElementById('addCaptureFaceBtn').style.display = 'none';
+                document.getElementById('addSaveFaceBtn').style.display = 'inline-flex';
+                document.getElementById('addRetakeFaceBtn').style.display = 'inline-flex';
+                
+            } catch (error) {
+                console.error('Error capturing face:', error);
+                feedback.style.background = 'rgba(239, 68, 68, 0.1)';
+                feedback.style.color = '#ef4444';
+                feedback.innerHTML = '<i class="fas fa-times-circle"></i> Error capturing face. Please try again.';
+                startAddRealTimeFaceDetection();
+            }
+        }
+        
+        function retakeAddFace() {
+            const video = document.getElementById('addFaceVideo');
+            const canvas = document.getElementById('addFaceCanvas');
+            
+            video.style.display = 'block';
+            canvas.style.display = 'none';
+            document.getElementById('addFaceDetectionCanvas').style.display = 'block';
+            addCapturedImageData = null;
+            addCapturedFaceDescriptor = null;
+            
+            document.getElementById('addSaveFaceBtn').style.display = 'none';
+            document.getElementById('addRetakeFaceBtn').style.display = 'none';
+            document.getElementById('addCaptureFaceBtn').style.display = 'inline-flex';
+            document.getElementById('addCaptureFaceBtn').disabled = true;
+            
+            startAddFaceCamera();
+        }
+        
+        async function saveAddFaceData() {
+            if (!addCapturedImageData || !addCapturedFaceDescriptor || !newStudentUserId) {
+                alert('No face data captured. Please capture face first.');
+                return;
+            }
+            
+            const btn = document.getElementById('addSaveFaceBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('user_id', newStudentUserId);
+                formData.append('face_image', addCapturedImageData);
+                formData.append('face_descriptor', JSON.stringify(addCapturedFaceDescriptor));
+                
+                const response = await fetch('save_face_admin.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('addFaceDetectionFeedback').style.background = 'rgba(34, 197, 94, 0.1)';
+                    document.getElementById('addFaceDetectionFeedback').style.color = '#22c55e';
+                    document.getElementById('addFaceDetectionFeedback').innerHTML = '<i class="fas fa-check-circle"></i> Face data saved successfully!';
+                    
+                    // Hide skip and save buttons, show finish
+                    document.getElementById('skipFaceBtn').style.display = 'none';
+                    document.getElementById('addSaveFaceBtn').style.display = 'none';
+                    document.getElementById('addRetakeFaceBtn').style.display = 'none';
+                    document.getElementById('finishAddStudentBtn').style.display = 'inline-flex';
+                    
+                    // Update step indicator
+                    document.querySelectorAll('#addStudentSteps .step-item')[1].style.background = 'rgba(34, 197, 94, 0.1)';
+                    document.querySelectorAll('#addStudentSteps .step-item')[1].style.borderColor = '#22c55e';
+                    document.querySelectorAll('#addStudentSteps .step-item')[1].innerHTML = '<i class="fas fa-check"></i> Face Registered';
+                } else {
+                    alert(result.message || 'Error saving face data');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-save"></i> Save Face Data';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error saving face data');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Save Face Data';
+            }
         }
         
         // Close modal on backdrop click
         document.querySelectorAll('.modal-overlay').forEach(modal => {
             modal.addEventListener('click', function(e) {
                 if (e.target === this) {
+                    if (this.id === 'addStudentModal') {
+                        stopAddFaceCamera();
+                    }
                     this.style.display = 'none';
                     document.body.style.overflow = '';
                 }
@@ -761,6 +1306,7 @@ $admin = $stmt->fetch(PDO::FETCH_ASSOC);
         // Close modal on Escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
+                stopAddFaceCamera();
                 document.querySelectorAll('.modal-overlay').forEach(modal => {
                     modal.style.display = 'none';
                 });

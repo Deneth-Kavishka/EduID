@@ -69,29 +69,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function addStudent($conn) {
-    // Validate required fields
-    $required = ['username', 'email', 'password', 'first_name', 'last_name', 'date_of_birth', 'gender', 'grade', 'enrollment_date'];
-    foreach ($required as $field) {
+    // Validate required fields - simplified for dashboard quick add
+    $required_basic = ['email', 'password', 'first_name', 'last_name'];
+    foreach ($required_basic as $field) {
         if (empty($_POST[$field])) {
             return ['success' => false, 'message' => ucfirst(str_replace('_', ' ', $field)) . ' is required'];
         }
     }
     
-    // Check if username or email already exists
-    $stmt = $conn->prepare("SELECT user_id FROM users WHERE username = :username OR email = :email");
-    $stmt->execute([':username' => $_POST['username'], ':email' => $_POST['email']]);
+    // Check if email already exists
+    $stmt = $conn->prepare("SELECT user_id FROM users WHERE email = :email");
+    $stmt->execute([':email' => $_POST['email']]);
     if ($stmt->fetch()) {
-        return ['success' => false, 'message' => 'Username or email already exists'];
+        return ['success' => false, 'message' => 'Email already exists'];
     }
     
-    // Generate student number
-    $student_number = 'STD' . date('Y') . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+    // Generate username from email or first_name.last_name
+    $username = !empty($_POST['username']) ? $_POST['username'] : strtolower($_POST['first_name'] . '.' . $_POST['last_name']);
+    $username = preg_replace('/[^a-z0-9.]/', '', $username);
+    
+    // Check if username already exists, append number if needed
+    $base_username = $username;
+    $counter = 1;
+    while (true) {
+        $stmt = $conn->prepare("SELECT user_id FROM users WHERE username = :username");
+        $stmt->execute([':username' => $username]);
+        if (!$stmt->fetch()) break;
+        $username = $base_username . $counter;
+        $counter++;
+    }
+    
+    // Generate student number if not provided
+    $student_number = !empty($_POST['student_id']) ? $_POST['student_id'] : 'STD' . date('Y') . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+    
+    // Check if student number already exists
+    $stmt = $conn->prepare("SELECT student_id FROM students WHERE student_number = :student_number");
+    $stmt->execute([':student_number' => $student_number]);
+    if ($stmt->fetch()) {
+        return ['success' => false, 'message' => 'Student ID already exists'];
+    }
     
     // Insert into users table
     $password_hash = password_hash($_POST['password'], PASSWORD_DEFAULT);
     $stmt = $conn->prepare("INSERT INTO users (username, email, password_hash, user_role, status, created_by) VALUES (:username, :email, :password, 'student', 'active', :created_by)");
     $stmt->execute([
-        ':username' => $_POST['username'],
+        ':username' => $username,
         ':email' => $_POST['email'],
         ':password' => $password_hash,
         ':created_by' => $_SESSION['user_id']
@@ -99,7 +121,7 @@ function addStudent($conn) {
     
     $user_id = $conn->lastInsertId();
     
-    // Insert into students table
+    // Insert into students table with flexible fields
     $stmt = $conn->prepare("INSERT INTO students (user_id, student_number, first_name, last_name, date_of_birth, gender, phone, address, grade, class_section, enrollment_date, emergency_contact, blood_group, parent_id) 
                            VALUES (:user_id, :student_number, :first_name, :last_name, :dob, :gender, :phone, :address, :grade, :class_section, :enrollment_date, :emergency_contact, :blood_group, :parent_id)");
     
@@ -108,13 +130,13 @@ function addStudent($conn) {
         ':student_number' => $student_number,
         ':first_name' => $_POST['first_name'],
         ':last_name' => $_POST['last_name'],
-        ':dob' => $_POST['date_of_birth'],
-        ':gender' => $_POST['gender'],
+        ':dob' => !empty($_POST['date_of_birth']) ? $_POST['date_of_birth'] : null,
+        ':gender' => $_POST['gender'] ?? null,
         ':phone' => $_POST['phone'] ?? null,
         ':address' => $_POST['address'] ?? null,
-        ':grade' => $_POST['grade'],
-        ':class_section' => $_POST['class_section'] ?? null,
-        ':enrollment_date' => $_POST['enrollment_date'],
+        ':grade' => $_POST['grade'] ?? null,
+        ':class_section' => !empty($_POST['section']) ? $_POST['section'] : ($_POST['class_section'] ?? null),
+        ':enrollment_date' => !empty($_POST['enrollment_date']) ? $_POST['enrollment_date'] : date('Y-m-d'),
         ':emergency_contact' => $_POST['emergency_contact'] ?? null,
         ':blood_group' => $_POST['blood_group'] ?? null,
         ':parent_id' => !empty($_POST['parent_id']) ? $_POST['parent_id'] : null
@@ -124,7 +146,7 @@ function addStudent($conn) {
     
     // Handle face data if provided
     if (!empty($_POST['face_descriptor'])) {
-        $stmt = $conn->prepare("INSERT INTO face_recognition_data (user_id, face_descriptor, registered_at) VALUES (:user_id, :descriptor, NOW())");
+        $stmt = $conn->prepare("INSERT INTO face_recognition_data (user_id, face_descriptor, is_active, created_at) VALUES (:user_id, :descriptor, 1, NOW())");
         $stmt->execute([
             ':user_id' => $user_id,
             ':descriptor' => $_POST['face_descriptor']
