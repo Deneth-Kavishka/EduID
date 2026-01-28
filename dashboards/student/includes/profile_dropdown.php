@@ -49,7 +49,7 @@ $header_default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
     <span style="font-size: 0.7rem; color: var(--text-secondary);" id="navbarDate"><?php echo date('m/d/Y'); ?></span>
 </div>
 
-<button class="theme-toggle" id="themeToggleTop" title="Toggle Theme">
+<button class="theme-toggle" id="themeToggleTop" title="Toggle Theme" type="button">
     <i class="fas fa-moon"></i>
 </button>
 
@@ -346,20 +346,55 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Theme toggle functionality for top header
-document.getElementById('themeToggleTop')?.addEventListener('click', function() {
-    const body = document.body;
-    const currentTheme = body.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+// Theme Toggle - Self-contained implementation
+(function() {
+    // Get saved theme or default to light
+    function getSavedTheme() {
+        return localStorage.getItem('theme') || 'light';
+    }
     
-    body.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
+    // Apply theme to document
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        
+        // Update all theme toggle icons
+        document.querySelectorAll('.theme-toggle i, #themeToggleTop i').forEach(function(icon) {
+            if (theme === 'dark') {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+    }
     
-    // Update all theme toggle icons
-    document.querySelectorAll('.theme-toggle i').forEach(icon => {
-        icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    // Toggle theme
+    function handleThemeToggle(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const currentTheme = getSavedTheme();
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        applyTheme(newTheme);
+    }
+    
+    // Initialize on DOM ready
+    document.addEventListener('DOMContentLoaded', function() {
+        // Apply saved theme immediately
+        applyTheme(getSavedTheme());
+        
+        // Attach click handler to theme toggle button
+        const themeBtn = document.getElementById('themeToggleTop');
+        if (themeBtn) {
+            themeBtn.addEventListener('click', handleThemeToggle);
+        }
     });
-});
+    
+    // Also apply theme immediately (before DOMContentLoaded)
+    applyTheme(getSavedTheme());
+})();
 
 // Update navbar time every second
 function updateNavbarTime() {

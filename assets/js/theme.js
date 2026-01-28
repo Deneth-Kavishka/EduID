@@ -15,44 +15,40 @@ function getTheme() {
 // Set the theme
 function setTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
+  document.body.setAttribute("data-theme", theme);
   localStorage.setItem("theme", theme);
   updateThemeIcon(theme);
 }
 
 // Update theme toggle icon
 function updateThemeIcon(theme) {
-  const themeToggle = document.getElementById("themeToggle");
-  const themeToggleTop = document.getElementById("themeToggleTop");
+  // Get all theme toggle buttons
+  const toggles = document.querySelectorAll(
+    "#themeToggle, #themeToggleTop, .theme-toggle",
+  );
 
-  if (themeToggle) {
-    const icon = themeToggle.querySelector("i");
-    if (icon) {
-      if (theme === "dark") {
-        icon.classList.remove("fa-moon");
-        icon.classList.add("fa-sun");
-      } else {
-        icon.classList.remove("fa-sun");
-        icon.classList.add("fa-moon");
+  toggles.forEach((toggle) => {
+    if (toggle) {
+      const icon = toggle.querySelector("i");
+      if (icon) {
+        if (theme === "dark") {
+          icon.classList.remove("fa-moon");
+          icon.classList.add("fa-sun");
+        } else {
+          icon.classList.remove("fa-sun");
+          icon.classList.add("fa-moon");
+        }
       }
     }
-  }
-
-  if (themeToggleTop) {
-    const icon = themeToggleTop.querySelector("i");
-    if (icon) {
-      if (theme === "dark") {
-        icon.classList.remove("fa-moon");
-        icon.classList.add("fa-sun");
-      } else {
-        icon.classList.remove("fa-sun");
-        icon.classList.add("fa-moon");
-      }
-    }
-  }
+  });
 }
 
 // Toggle between light and dark theme
-function toggleTheme() {
+function toggleTheme(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
   const currentTheme = getTheme();
   const newTheme = currentTheme === "light" ? "dark" : "light";
   setTheme(newTheme);
@@ -269,17 +265,25 @@ document.addEventListener("DOMContentLoaded", function () {
   const savedTheme = getTheme();
   setTheme(savedTheme);
 
-  // Add event listener to theme toggle buttons
-  const themeToggle = document.getElementById("themeToggle");
-  const themeToggleTop = document.getElementById("themeToggleTop");
+  // Add event listener to ALL theme toggle buttons
+  const allThemeToggles = document.querySelectorAll(
+    "#themeToggle, #themeToggleTop, .theme-toggle",
+  );
 
-  if (themeToggle) {
-    themeToggle.addEventListener("click", toggleTheme);
-  }
+  allThemeToggles.forEach((toggle) => {
+    if (toggle) {
+      // Remove any existing listeners by cloning
+      const newToggle = toggle.cloneNode(true);
+      toggle.parentNode.replaceChild(newToggle, toggle);
 
-  if (themeToggleTop) {
-    themeToggleTop.addEventListener("click", toggleTheme);
-  }
+      // Add fresh click listener
+      newToggle.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleTheme();
+      });
+    }
+  });
 
   // Create page loader
   createPageLoader();

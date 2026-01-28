@@ -151,26 +151,12 @@ $upcoming_exams = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             <!-- Content Area -->
             <div class="content-area">
-                <!-- Student Info Card -->
-                <div class="card mb-3" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 2rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem;">
-                                <?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?>
-                            </h2>
-                            <p style="opacity: 0.95; font-size: 1.1rem;">
-                                <i class="fas fa-id-card"></i> Student ID: <?php echo htmlspecialchars($student['student_number']); ?>
-                            </p>
-                            <p style="opacity: 0.95; font-size: 1.1rem;">
-                                <i class="fas fa-graduation-cap"></i> Grade: <?php echo htmlspecialchars($student['grade']); ?> - <?php echo htmlspecialchars($student['class_section']); ?>
-                            </p>
-                        </div>
-                        <div style="text-align: center;">
-                            <a href="qr-code.php" style="background: white; color: var(--primary-color); padding: 1rem 2rem; border-radius: 50px; font-weight: 600; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                                <i class="fas fa-qrcode"></i> View QR Code
-                            </a>
-                        </div>
-                    </div>
+                <!-- Welcome Message -->
+                <div style="margin-bottom: 2rem;">
+                    <h2 style="font-size: 1.75rem; font-weight: 600; color: var(--text-primary);">
+                        Welcome, <?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?>!
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Here's your dashboard overview</p>
                 </div>
                 
                 <!-- Stats Grid -->

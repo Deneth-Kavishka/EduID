@@ -35,7 +35,7 @@ $header_default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
 
 <!-- Header Right Section with Profile Dropdown -->
 <div class="header-right">
-    <button class="theme-toggle" id="themeToggleTop" title="Toggle Theme">
+    <button class="theme-toggle" id="themeToggleTop" title="Toggle Theme" type="button" onclick="toggleTheme(event)">
         <i class="fas fa-moon"></i>
     </button>
     

@@ -32,7 +32,7 @@ $header_profile_pic = !empty($current_user['profile_picture']) ? '../../' . $cur
 $header_default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='8' r='4' fill='%23cbd5e1'/%3E%3Cpath d='M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z' fill='%23cbd5e1'/%3E%3C/svg%3E";
 ?>
 
-<button class="theme-toggle" id="themeToggleTop" title="Toggle Theme">
+<button class="theme-toggle" id="themeToggleTop" title="Toggle Theme" type="button" onclick="toggleTheme(event)">
     <i class="fas fa-moon"></i>
 </button>
 
