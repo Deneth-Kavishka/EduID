@@ -8,14 +8,14 @@ $conn = $db->getConnection();
 $parent_id = $_SESSION['parent_id'];
 
 // Get parent details
-$query = "SELECT p.*, u.email FROM parents p JOIN users u ON p.user_id = u.user_id WHERE p.parent_id = :parent_id";
+$query = "SELECT p.*, u.email, u.profile_picture FROM parents p JOIN users u ON p.user_id = u.user_id WHERE p.parent_id = :parent_id";
 $stmt = $conn->prepare($query);
 $stmt->bindParam(':parent_id', $parent_id);
 $stmt->execute();
 $parent = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Get children
-$query = "SELECT s.*, u.username, u.email as student_email 
+$query = "SELECT s.*, u.username, u.email as student_email, u.profile_picture
           FROM students s 
           JOIN users u ON s.user_id = u.user_id 
           WHERE s.parent_id = :parent_id AND u.status = 'active'";
@@ -77,9 +77,6 @@ if (!empty($child_ids)) {
                     <img src="../../assets/images/logo.svg" alt="EduID">
                     <span>EduID</span>
                 </div>
-                <button class="theme-toggle" id="themeToggle">
-                    <i class="fas fa-moon"></i>
-                </button>
             </div>
             
             <nav class="sidebar-nav">
@@ -134,7 +131,7 @@ if (!empty($child_ids)) {
             <!-- Header -->
             <header class="top-header">
                 <div class="header-left">
-                    <h1>Welcome, <?php echo htmlspecialchars($parent['first_name']); ?>!</h1>
+                    <h1>Dashboard</h1>
                     <div class="breadcrumb">
                         <span>Home</span>
                         <i class="fas fa-chevron-right"></i>
@@ -143,33 +140,19 @@ if (!empty($child_ids)) {
                 </div>
                 
                 <div class="header-right">
-                    <div class="notification-icon">
-                        <i class="fas fa-bell"></i>
-                        <span class="badge">2</span>
-                    </div>
-                    
-                    <div class="user-menu">
-                        <img src="../../assets/images/default-avatar.png" alt="Parent" class="user-avatar" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2712%27 cy=%278%27 r=%274%27 fill=%27%23cbd5e1%27/%3E%3Cpath d=%27M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z%27 fill=%27%23cbd5e1%27/%3E%3C/svg%3E';">
-                    </div>
+                    <?php include 'includes/profile_dropdown.php'; ?>
                 </div>
             </header>
             
             <!-- Content Area -->
             <div class="content-area">
-                <!-- Parent Info Card -->
-                <div class="card mb-3" style="background: linear-gradient(135deg, #7c3aed, #ec4899); color: white; padding: 2rem;">
-                    <div>
-                        <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem;">
-                            <?php echo htmlspecialchars($parent['first_name'] . ' ' . $parent['last_name']); ?>
-                        </h2>
-                        <p style="opacity: 0.95; font-size: 1.1rem;">
-                            <i class="fas fa-phone"></i> <?php echo htmlspecialchars($parent['phone']); ?> | 
-                            <i class="fas fa-envelope"></i> <?php echo htmlspecialchars($parent['email']); ?>
-                        </p>
-                        <p style="opacity: 0.95; font-size: 1.1rem;">
-                            <i class="fas fa-users"></i> Monitoring <?php echo $stats['total_children']; ?> child<?php echo $stats['total_children'] != 1 ? 'ren' : ''; ?>
-                        </p>
-                    </div>
+                <!-- Welcome Message -->
+                <div style="margin-bottom: 2rem;">
+                    <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--text-primary); margin: 0;">
+                        <i class="fas fa-hand-wave" style="color: #f59e0b; margin-right: 0.5rem;"></i>
+                        Welcome, <?php echo htmlspecialchars($parent['first_name'] . ' ' . $parent['last_name']); ?>!
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-top: 0.5rem;">Here's your family dashboard overview</p>
                 </div>
                 
                 <!-- Stats Grid -->
@@ -248,7 +231,7 @@ if (!empty($child_ids)) {
                                 ?>
                                 <div class="card" style="padding: 1.5rem;">
                                     <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1rem;">
-                                        <?php $childAvatar = !empty($child['profile_picture']) ? $child['profile_picture'] : '../../assets/images/default-avatar.png'; ?>
+                                        <?php $childAvatar = !empty($child['profile_picture']) ? '../../' . $child['profile_picture'] : '../../assets/images/default-avatar.png'; ?>
                                         <img src="<?php echo htmlspecialchars($childAvatar); ?>" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color);" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2712%27 cy=%278%27 r=%274%27 fill=%27%23cbd5e1%27/%3E%3Cpath d=%27M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z%27 fill=%27%23cbd5e1%27/%3E%3C/svg%3E';">
                                         <div style="flex: 1;">
                                             <h4 style="font-size: 1.1rem; margin-bottom: 0.25rem; color: var(--text-primary);">
@@ -276,7 +259,7 @@ if (!empty($child_ids)) {
                                     
                                     <a href="children.php?student_id=<?php echo $child['student_id']; ?>" 
                                        style="display: block; text-align: center; background: var(--primary-color); color: white; 
-                                              padding: 0.75rem; border-radius: var(--border-radius); font-weight: 600; transition: all 0.3s;">
+                                              padding: 0.75rem; border-radius: var(--border-radius); font-weight: 600; transition: all 0.3s; text-decoration: none;">
                                         <i class="fas fa-eye"></i> View Details
                                     </a>
                                 </div>
@@ -287,22 +270,22 @@ if (!empty($child_ids)) {
                 
                 <!-- Quick Links -->
                 <div class="mt-3" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <a href="attendance.php" class="card" style="text-align: center; padding: 1.5rem; cursor: pointer;">
+                    <a href="attendance.php" class="card" style="text-align: center; padding: 1.5rem; cursor: pointer; text-decoration: none;">
                         <i class="fas fa-calendar-check" style="font-size: 2rem; color: var(--primary-color); margin-bottom: 0.75rem;"></i>
                         <h3 style="font-size: 1rem; color: var(--text-primary);">Attendance History</h3>
                     </a>
                     
-                    <a href="exams.php" class="card" style="text-align: center; padding: 1.5rem; cursor: pointer;">
+                    <a href="exams.php" class="card" style="text-align: center; padding: 1.5rem; cursor: pointer; text-decoration: none;">
                         <i class="fas fa-clipboard-list" style="font-size: 2rem; color: var(--success-color); margin-bottom: 0.75rem;"></i>
                         <h3 style="font-size: 1rem; color: var(--text-primary);">Exam Schedule</h3>
                     </a>
                     
-                    <a href="events.php" class="card" style="text-align: center; padding: 1.5rem; cursor: pointer;">
+                    <a href="events.php" class="card" style="text-align: center; padding: 1.5rem; cursor: pointer; text-decoration: none;">
                         <i class="fas fa-calendar-days" style="font-size: 2rem; color: var(--warning-color); margin-bottom: 0.75rem;"></i>
                         <h3 style="font-size: 1rem; color: var(--text-primary);">Events</h3>
                     </a>
                     
-                    <a href="notifications.php" class="card" style="text-align: center; padding: 1.5rem; cursor: pointer;">
+                    <a href="notifications.php" class="card" style="text-align: center; padding: 1.5rem; cursor: pointer; text-decoration: none;">
                         <i class="fas fa-bell" style="font-size: 2rem; color: var(--danger-color); margin-bottom: 0.75rem;"></i>
                         <h3 style="font-size: 1rem; color: var(--text-primary);">Notifications</h3>
                     </a>

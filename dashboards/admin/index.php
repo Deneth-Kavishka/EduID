@@ -63,6 +63,12 @@ $query = "SELECT date,
 $stmt = $conn->prepare($query);
 $stmt->execute();
 $attendance_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get admin user info
+$query = "SELECT username, email, profile_picture FROM users WHERE user_id = :user_id";
+$stmt = $conn->prepare($query);
+$stmt->execute([':user_id' => $_SESSION['user_id']]);
+$admin = $stmt->fetch(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -178,7 +184,7 @@ $attendance_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <!-- Header -->
             <header class="top-header">
                 <div class="header-left">
-                    <h1>Dashboard Overview</h1>
+                    <h1>Dashboard</h1>
                     <div class="breadcrumb">
                         <span>Home</span>
                         <i class="fas fa-chevron-right"></i>
@@ -191,6 +197,15 @@ $attendance_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             <!-- Content Area -->
             <div class="content-area">
+                <!-- Welcome Message -->
+                <div style="margin-bottom: 2rem;">
+                    <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--text-primary); margin: 0;">
+                        <i class="fas fa-hand-wave" style="color: #f59e0b; margin-right: 0.5rem;"></i>
+                        Welcome, <?php echo htmlspecialchars($admin['username']); ?>!
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-top: 0.5rem;">Here's your administration dashboard overview</p>
+                </div>
+                
                 <?php if ($success): ?>
                 <div class="alert alert-success" style="margin-bottom: 1rem; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px; color: #22c55e; display: flex; align-items: center; gap: 0.5rem;">
                     <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($success); ?>

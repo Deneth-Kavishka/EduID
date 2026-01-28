@@ -136,7 +136,7 @@ $upcoming_exams = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <!-- Header -->
             <header class="top-header">
                 <div class="header-left">
-                    <h1>Welcome, <?php echo htmlspecialchars($student['first_name']); ?>!</h1>
+                    <h1>Dashboard</h1>
                     <div class="breadcrumb">
                         <span>Home</span>
                         <i class="fas fa-chevron-right"></i>
@@ -153,10 +153,11 @@ $upcoming_exams = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="content-area">
                 <!-- Welcome Message -->
                 <div style="margin-bottom: 2rem;">
-                    <h2 style="font-size: 1.75rem; font-weight: 600; color: var(--text-primary);">
+                    <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--text-primary); margin: 0;">
+                        <i class="fas fa-hand-wave" style="color: #f59e0b; margin-right: 0.5rem;"></i>
                         Welcome, <?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?>!
                     </h2>
-                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Here's your dashboard overview</p>
+                    <p style="color: var(--text-secondary); margin-top: 0.5rem;">Here's your dashboard overview for today</p>
                 </div>
                 
                 <!-- Stats Grid -->
