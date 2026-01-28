@@ -154,11 +154,11 @@ $recent_verifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="stat-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(59, 130, 246, 0.2); padding: 1.25rem; border-radius: 12px;">
                         <div style="display: flex; align-items: center; gap: 1rem;">
                             <div style="width: 50px; height: 50px; border-radius: 12px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-clock" style="font-size: 1.5rem; color: #3b82f6;"></i>
+                                <i class="fas fa-history" style="font-size: 1.5rem; color: #3b82f6;"></i>
                             </div>
                             <div>
-                                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Current Time</p>
-                                <h3 style="font-size: 1.75rem; font-weight: 700; color: #3b82f6;" id="currentTime"><?php echo date('H:i'); ?></h3>
+                                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Recent Scans</p>
+                                <h3 style="font-size: 1.75rem; font-weight: 700; color: #3b82f6;"><?php echo count($recent_verifications); ?></h3>
                             </div>
                         </div>
                     </div>
@@ -166,11 +166,11 @@ $recent_verifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="stat-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(139, 92, 246, 0.2); padding: 1.25rem; border-radius: 12px;">
                         <div style="display: flex; align-items: center; gap: 1rem;">
                             <div style="width: 50px; height: 50px; border-radius: 12px; background: rgba(139, 92, 246, 0.15); display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-calendar-day" style="font-size: 1.5rem; color: #8b5cf6;"></i>
+                                <i class="fas fa-camera" style="font-size: 1.5rem; color: #8b5cf6;"></i>
                             </div>
                             <div>
-                                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Today's Date</p>
-                                <h3 style="font-size: 1.1rem; font-weight: 700; color: #8b5cf6;"><?php echo date('M d, Y'); ?></h3>
+                                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Scanner Status</p>
+                                <h3 style="font-size: 1rem; font-weight: 700; color: #8b5cf6;">Ready</h3>
                             </div>
                         </div>
                     </div>
@@ -448,14 +448,31 @@ $recent_verifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
         let html5QrcodeScanner = null;
         let isScanning = false;
         
-        // Update current time
-        function updateTime() {
+        // Update current time with seconds and date
+        function updateAllTimeDisplays() {
             const now = new Date();
-            document.getElementById('currentTime').textContent = 
-                now.getHours().toString().padStart(2, '0') + ':' + 
-                now.getMinutes().toString().padStart(2, '0');
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' });
+            
+            // Update navbar time
+            const navbarTime = document.getElementById('navbarTime');
+            const navbarDate = document.getElementById('navbarDate');
+            if (navbarTime && navbarDate) {
+                navbarTime.textContent = timeStr;
+                navbarDate.textContent = dateStr;
+            }
+            
+            // Update stats card time if exists
+            const currentTime = document.getElementById('currentTime');
+            const currentDate = document.getElementById('currentDate');
+            if (currentTime && currentDate) {
+                currentTime.textContent = timeStr;
+                currentDate.textContent = dateStr;
+            }
         }
-        setInterval(updateTime, 1000);
+        
+        setInterval(updateAllTimeDisplays, 1000);
+        updateAllTimeDisplays(); // Initial update
         
         // Initialize camera list
         async function initCameras() {
@@ -763,4 +780,20 @@ $recent_verifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
         });
     </script>
 </body>
+<script>
+// Preserve sidebar scroll position and ensure active item is visible
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.querySelector('.sidebar-nav');
+    const activeItem = document.querySelector('.nav-item.active');
+    
+    if (sidebar && activeItem) {
+        setTimeout(() => {
+            activeItem.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }, 100);
+    }
+});
+</script>
 </html>

@@ -43,6 +43,12 @@ $header_profile_pic = !empty($current_user['profile_picture']) ? '../../' . $cur
 $header_default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='8' r='4' fill='%2310b981'/%3E%3Cpath d='M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z' fill='%2310b981'/%3E%3C/svg%3E";
 ?>
 
+<!-- Current Time Display - Windows Taskbar Style -->
+<div class="header-time-display" style="display: flex; flex-direction: column; align-items: flex-end; margin-right: 1rem; line-height: 1.2;">
+    <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-primary);" id="navbarTime"><?php echo date('H:i:s'); ?></span>
+    <span style="font-size: 0.7rem; color: var(--text-secondary);" id="navbarDate"><?php echo date('m/d/Y'); ?></span>
+</div>
+
 <button class="theme-toggle" id="themeToggleTop" title="Toggle Theme">
     <i class="fas fa-moon"></i>
 </button>

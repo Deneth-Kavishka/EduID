@@ -1,6 +1,5 @@
 <?php
 require_once '../../config/config.php';
-require_once '../../vendor/phpqrcode/qrlib.php'; // We'll create instructions for installing this
 
 checkRole(['student']);
 
@@ -16,36 +15,25 @@ $stmt->bindParam(':student_id', $student_id);
 $stmt->execute();
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Generate QR code data
+// Generate QR code data (this will be used by JavaScript QR generator)
 $qr_data = json_encode([
+    'type' => 'eduid_student',
     'student_id' => $student['student_id'],
     'student_number' => $student['student_number'],
     'name' => $student['first_name'] . ' ' . $student['last_name'],
     'grade' => $student['grade'],
-    'class' => $student['class_section'],
-    'timestamp' => time()
+    'class' => $student['class_section']
 ]);
 
-// QR code file path
-$qr_filename = 'student_' . $student['student_number'] . '.png';
-$qr_filepath = QR_CODES_PATH . $qr_filename;
-
-// Generate QR code if not exists
-if (!file_exists($qr_filepath)) {
-    if (!is_dir(QR_CODES_PATH)) {
-        mkdir(QR_CODES_PATH, 0777, true);
-    }
-    QRcode::png($qr_data, $qr_filepath, QR_ECLEVEL_H, 10, 2);
-    
-    // Update database
+// Update database with QR code reference if not set
+if (empty($student['qr_code'])) {
+    $qr_ref = 'student_' . $student['student_number'];
     $update_query = "UPDATE students SET qr_code = :qr_code WHERE student_id = :student_id";
     $update_stmt = $conn->prepare($update_query);
-    $update_stmt->bindParam(':qr_code', $qr_filename);
+    $update_stmt->bindParam(':qr_code', $qr_ref);
     $update_stmt->bindParam(':student_id', $student_id);
     $update_stmt->execute();
 }
-
-$qr_url = '../../uploads/qr_codes/' . $qr_filename;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -141,9 +129,6 @@ $qr_url = '../../uploads/qr_codes/' . $qr_filename;
                     <img src="../../assets/images/logo.svg" alt="EduID">
                     <span>EduID</span>
                 </div>
-                <button class="theme-toggle" id="themeToggle">
-                    <i class="fas fa-moon"></i>
-                </button>
             </div>
             
             <nav class="sidebar-nav">
@@ -205,6 +190,10 @@ $qr_url = '../../uploads/qr_codes/' . $qr_filename;
                         <span>QR Code</span>
                     </div>
                 </div>
+                
+                <div class="header-right">
+                    <?php include 'includes/profile_dropdown.php'; ?>
+                </div>
             </header>
             
             <!-- Content Area -->
@@ -223,7 +212,7 @@ $qr_url = '../../uploads/qr_codes/' . $qr_filename;
                         </p>
                         
                         <div class="qr-image" id="qrCodeImage">
-                            <img src="<?php echo $qr_url; ?>" alt="Student QR Code">
+                            <div id="qrcode" style="display: inline-block;"></div>
                         </div>
                         
                         <div style="background: rgba(37, 99, 235, 0.1); padding: 1.5rem; border-radius: var(--border-radius); margin-top: 2rem;">
@@ -239,9 +228,9 @@ $qr_url = '../../uploads/qr_codes/' . $qr_filename;
                         </div>
                         
                         <div class="qr-actions">
-                            <a href="<?php echo $qr_url; ?>" download="my_qr_code.png" class="btn-download">
+                            <button onclick="downloadQRCode()" class="btn-download">
                                 <i class="fas fa-download"></i> Download QR Code
-                            </a>
+                            </button>
                             <button onclick="printQRCode()" class="btn-print">
                                 <i class="fas fa-print"></i> Print QR Code
                             </button>
@@ -264,56 +253,231 @@ $qr_url = '../../uploads/qr_codes/' . $qr_filename;
         </main>
     </div>
     
+    <!-- QR Code Generator Library - Using qrcodejs which is more reliable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="../../assets/js/theme.js"></script>
     <script>
+        // QR Code Data
+        const qrData = <?php echo $qr_data; ?>;
+        let qrCodeInstance = null;
+        
+        // Generate QR Code on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            generateQRCode();
+        });
+        
+        function generateQRCode() {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            try {
+                // Create QR code using qrcodejs library
+                qrCodeInstance = new QRCode(qrContainer, {
+                    text: JSON.stringify(qrData),
+                    width: 280,
+                    height: 280,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                console.log('QR Code generated successfully');
+            } catch (error) {
+                console.error('QR Code generation error:', error);
+                qrContainer.innerHTML = '<p style="color: red;">Error generating QR code. Please refresh the page.</p>';
+            }
+        }
+        
+        function downloadQRCode() {
+            // qrcodejs creates an img element inside the container
+            const qrImg = document.querySelector('#qrcode img');
+            const qrCanvas = document.querySelector('#qrcode canvas');
+            
+            if (!qrImg && !qrCanvas) {
+                alert('QR Code not generated yet. Please wait and try again.');
+                return;
+            }
+            
+            // Create a canvas for download
+            const downloadCanvas = document.createElement('canvas');
+            const ctx = downloadCanvas.getContext('2d');
+            const padding = 40;
+            const qrSize = 280;
+            
+            downloadCanvas.width = qrSize + (padding * 2);
+            downloadCanvas.height = qrSize + (padding * 2) + 80;
+            
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, downloadCanvas.width, downloadCanvas.height);
+            
+            // Draw QR code from image or canvas
+            const source = qrImg || qrCanvas;
+            ctx.drawImage(source, padding, padding, qrSize, qrSize);
+            
+            // Add student info text
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('<?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?>', downloadCanvas.width / 2, qrSize + padding + 30);
+            
+            ctx.font = '14px Arial';
+            ctx.fillText('ID: <?php echo htmlspecialchars($student['student_number']); ?>', downloadCanvas.width / 2, qrSize + padding + 55);
+            
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#666666';
+            ctx.fillText('EduID Verification', downloadCanvas.width / 2, qrSize + padding + 75);
+            
+            // Download
+            const link = document.createElement('a');
+            link.download = 'EduID_QR_<?php echo $student['student_number']; ?>.png';
+            link.href = downloadCanvas.toDataURL('image/png', 1.0);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
         function printQRCode() {
-            const qrImage = document.getElementById('qrCodeImage');
-            const printWindow = window.open('', '_blank');
+            // qrcodejs creates an img element inside the container
+            const qrImg = document.querySelector('#qrcode img');
+            const qrCanvas = document.querySelector('#qrcode canvas');
+            
+            if (!qrImg && !qrCanvas) {
+                alert('QR Code not generated yet. Please wait and try again.');
+                return;
+            }
+            
+            // Get data URL from image or canvas
+            let dataUrl;
+            if (qrImg) {
+                dataUrl = qrImg.src;
+            } else {
+                dataUrl = qrCanvas.toDataURL('image/png');
+            }
+            
+            const printWindow = window.open('', '_blank', 'width=600,height=700');
+            
+            if (!printWindow) {
+                alert('Please allow popups to print the QR code.');
+                return;
+            }
+            
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>Print QR Code</title>
+                    <title>Print QR Code - EduID</title>
                     <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
                         body {
                             display: flex;
                             justify-content: center;
                             align-items: center;
-                            height: 100vh;
-                            margin: 0;
-                            font-family: Arial, sans-serif;
+                            min-height: 100vh;
+                            font-family: 'Segoe UI', Arial, sans-serif;
+                            background: white;
                         }
                         .print-container {
                             text-align: center;
-                        }
-                        img {
+                            padding: 40px;
+                            border: 3px solid #2563eb;
+                            border-radius: 20px;
                             max-width: 400px;
                         }
-                        h2 {
-                            margin-top: 1rem;
+                        .logo {
+                            font-size: 28px;
+                            font-weight: 800;
+                            color: #2563eb;
+                            margin-bottom: 20px;
+                        }
+                        .qr-image {
+                            background: white;
+                            padding: 15px;
+                            border-radius: 10px;
+                            display: inline-block;
+                            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                        }
+                        .qr-image img {
+                            display: block;
+                            width: 250px;
+                            height: 250px;
+                        }
+                        .student-name {
+                            font-size: 22px;
+                            font-weight: 700;
+                            color: #1e293b;
+                            margin-top: 20px;
+                        }
+                        .student-id {
+                            font-size: 16px;
+                            color: #64748b;
+                            margin-top: 8px;
+                        }
+                        .student-class {
+                            font-size: 14px;
+                            color: #94a3b8;
+                            margin-top: 5px;
+                        }
+                        .footer {
+                            margin-top: 25px;
+                            padding-top: 15px;
+                            border-top: 1px solid #e2e8f0;
+                            font-size: 12px;
+                            color: #94a3b8;
+                        }
+                        @media print {
+                            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                            .print-container { border: 3px solid #2563eb !important; }
                         }
                     </style>
                 </head>
                 <body>
                     <div class="print-container">
-                        <h2><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></h2>
-                        <p>Student ID: <?php echo htmlspecialchars($student['student_number']); ?></p>
-                        ${qrImage.innerHTML}
-                        <p style="margin-top: 1rem; font-size: 0.9rem;">EduID - Educational Identity Verification System</p>
+                        <div class="logo">🎓 EduID</div>
+                        <div class="qr-image">
+                            <img src="${dataUrl}" alt="QR Code">
+                        </div>
+                        <div class="student-name"><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></div>
+                        <div class="student-id">Student ID: <?php echo htmlspecialchars($student['student_number']); ?></div>
+                        <div class="student-class">Grade <?php echo htmlspecialchars($student['grade']); ?> - Section <?php echo htmlspecialchars($student['class_section']); ?></div>
+                        <div class="footer">Educational Identity Verification System</div>
                     </div>
-                    <script>
-                        window.onload = function() {
-                            window.print();
-                            window.onafterprint = function() {
-                                window.close();
-                            };
-                        };
-                    <\/script>
                 </body>
                 </html>
             `);
             printWindow.document.close();
+            
+            // Wait for content to load then print
+            printWindow.onload = function() {
+                setTimeout(function() {
+                    printWindow.focus();
+                    printWindow.print();
+                }, 250);
+            };
         }
+        
+        // Sidebar scroll position preservation
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar-nav');
+            const savedScrollPos = sessionStorage.getItem('sidebarScrollPos');
+            if (savedScrollPos && sidebar) {
+                sidebar.scrollTop = parseInt(savedScrollPos);
+            }
+            
+            const activeItem = document.querySelector('.nav-item.active');
+            if (activeItem && sidebar) {
+                const sidebarRect = sidebar.getBoundingClientRect();
+                const itemRect = activeItem.getBoundingClientRect();
+                if (itemRect.top < sidebarRect.top || itemRect.bottom > sidebarRect.bottom) {
+                    activeItem.scrollIntoView({ block: 'center', behavior: 'auto' });
+                }
+            }
+            
+            if (sidebar) {
+                sidebar.addEventListener('scroll', function() {
+                    sessionStorage.setItem('sidebarScrollPos', sidebar.scrollTop);
+                });
+            }
+        });
     </script>
 </body>
 </html>

@@ -781,4 +781,39 @@ $default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' 
         }
     </script>
 </body>
+<script>
+// Preserve sidebar scroll position and ensure active item is visible
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.querySelector('.sidebar-nav');
+    const activeItem = document.querySelector('.nav-item.active');
+    
+    if (sidebar && activeItem) {
+        setTimeout(() => {
+            activeItem.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }, 100);
+    }
+    
+    // Universal time update function for navbar
+    function updateAllTimeDisplays() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' });
+        
+        // Update navbar time
+        const navbarTime = document.getElementById('navbarTime');
+        const navbarDate = document.getElementById('navbarDate');
+        if (navbarTime && navbarDate) {
+            navbarTime.textContent = timeStr;
+            navbarDate.textContent = dateStr;
+        }
+    }
+    
+    // Update time every second
+    setInterval(updateAllTimeDisplays, 1000);
+    updateAllTimeDisplays(); // Initial update
+});
+</script>
 </html>

@@ -748,4 +748,20 @@ $unmarked_count = $stats['total_students'] - ($stats['present_count'] + $stats['
         });
     </script>
 </body>
+<script>
+// Preserve sidebar scroll position and ensure active item is visible
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.querySelector('.sidebar-nav');
+    const activeItem = document.querySelector('.nav-item.active');
+    
+    if (sidebar && activeItem) {
+        setTimeout(() => {
+            activeItem.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }, 100);
+    }
+});
+</script>
 </html>

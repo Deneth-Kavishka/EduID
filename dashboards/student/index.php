@@ -82,9 +82,6 @@ $upcoming_exams = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <img src="../../assets/images/logo.svg" alt="EduID">
                     <span>EduID</span>
                 </div>
-                <button class="theme-toggle" id="themeToggle">
-                    <i class="fas fa-moon"></i>
-                </button>
             </div>
             
             <nav class="sidebar-nav">
@@ -126,10 +123,6 @@ $upcoming_exams = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 <div class="nav-section">
                     <div class="nav-section-title">Account</div>
-                    <a href="settings.php" class="nav-item">
-                        <i class="fas fa-cog"></i>
-                        <span>Settings</span>
-                    </a>
                     <a href="../../auth/logout.php" class="nav-item">
                         <i class="fas fa-sign-out-alt"></i>
                         <span>Logout</span>
@@ -152,15 +145,7 @@ $upcoming_exams = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
                 
                 <div class="header-right">
-                    <div class="notification-icon">
-                        <i class="fas fa-bell"></i>
-                        <span class="badge">2</span>
-                    </div>
-                    
-                    <div class="user-menu">
-                        <?php $avatar = !empty($student['profile_picture']) ? $student['profile_picture'] : '../../assets/images/default-avatar.png'; ?>
-                        <img src="<?php echo htmlspecialchars($avatar); ?>" alt="Student" class="user-avatar" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2712%27 cy=%278%27 r=%274%27 fill=%27%23cbd5e1%27/%3E%3Cpath d=%27M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z%27 fill=%27%23cbd5e1%27/%3E%3C/svg%3E';">
-                    </div>
+                    <?php include 'includes/profile_dropdown.php'; ?>
                 </div>
             </header>
             
@@ -381,5 +366,30 @@ $upcoming_exams = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
     
     <script src="../../assets/js/theme.js"></script>
+    <script>
+        // Sidebar scroll position preservation
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar-nav');
+            const savedScrollPos = sessionStorage.getItem('sidebarScrollPos');
+            if (savedScrollPos && sidebar) {
+                sidebar.scrollTop = parseInt(savedScrollPos);
+            }
+            
+            const activeItem = document.querySelector('.nav-item.active');
+            if (activeItem && sidebar) {
+                const sidebarRect = sidebar.getBoundingClientRect();
+                const itemRect = activeItem.getBoundingClientRect();
+                if (itemRect.top < sidebarRect.top || itemRect.bottom > sidebarRect.bottom) {
+                    activeItem.scrollIntoView({ block: 'center', behavior: 'auto' });
+                }
+            }
+            
+            if (sidebar) {
+                sidebar.addEventListener('scroll', function() {
+                    sessionStorage.setItem('sidebarScrollPos', sidebar.scrollTop);
+                });
+            }
+        });
+    </script>
 </body>
 </html>

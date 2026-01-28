@@ -147,29 +147,6 @@ $recent_verifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             <!-- Content Area -->
             <div class="content-area">
-                <!-- Teacher Info Card -->
-                <div class="card mb-3" style="background: linear-gradient(135deg, #10b981, #06b6d4); color: white; padding: 2rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem;">
-                                <?php echo htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name']); ?>
-                            </h2>
-                            <p style="opacity: 0.95; font-size: 1.1rem;">
-                                <i class="fas fa-id-card"></i> Employee ID: <?php echo htmlspecialchars($teacher['employee_number']); ?>
-                            </p>
-                            <p style="opacity: 0.95; font-size: 1.1rem;">
-                                <i class="fas fa-book"></i> Department: <?php echo htmlspecialchars($teacher['department']); ?> | 
-                                Subject: <?php echo htmlspecialchars($teacher['subject']); ?>
-                            </p>
-                        </div>
-                        <div style="text-align: center;">
-                            <a href="qr-scanner.php" style="background: white; color: #10b981; padding: 1rem 2rem; border-radius: 50px; font-weight: 600; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                                <i class="fas fa-qrcode"></i> Open QR Scanner
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- Stats Grid -->
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -204,39 +181,35 @@ $recent_verifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     
                     <div class="stat-card">
                         <div class="stat-icon danger">
-                            <i class="fas fa-clock"></i>
+                            <i class="fas fa-clipboard-check"></i>
                         </div>
                         <div class="stat-details">
-                            <h3><?php echo date('H:i'); ?></h3>
-                            <p>Current Time</p>
+                            <h3><?php echo count($recent_verifications); ?></h3>
+                            <p>Recent Activity</p>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Quick Actions -->
-                <div class="mt-3" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
-                    <a href="qr-scanner.php" class="card" style="text-align: center; padding: 2rem; cursor: pointer; transition: all 0.3s;">
-                        <i class="fas fa-qrcode" style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
-                        <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.5rem;">Scan QR Code</h3>
-                        <p style="color: var(--text-secondary); font-size: 0.875rem;">Verify student identity</p>
+                <div class="mt-3" style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                    <a href="qr-scanner.php" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; text-decoration: none; transition: all 0.2s; cursor: pointer;">
+                        <i class="fas fa-qrcode" style="font-size: 1rem; color: var(--primary-color);"></i>
+                        <span style="font-size: 0.875rem; font-weight: 500; color: var(--text-primary);">Scan QR Code</span>
                     </a>
                     
-                    <a href="face-verification.php" class="card" style="text-align: center; padding: 2rem; cursor: pointer;">
-                        <i class="fas fa-face-smile" style="font-size: 2.5rem; color: var(--success-color); margin-bottom: 1rem;"></i>
-                        <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.5rem;">Face Verification</h3>
-                        <p style="color: var(--text-secondary); font-size: 0.875rem;">Biometric verification</p>
+                    <a href="face-verification.php" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; text-decoration: none; transition: all 0.2s; cursor: pointer;">
+                        <i class="fas fa-face-smile" style="font-size: 1rem; color: var(--success-color);"></i>
+                        <span style="font-size: 0.875rem; font-weight: 500; color: var(--text-primary);">Face Verification</span>
                     </a>
                     
-                    <a href="mark-attendance.php" class="card" style="text-align: center; padding: 2rem; cursor: pointer;">
-                        <i class="fas fa-calendar-check" style="font-size: 2.5rem; color: var(--warning-color); margin-bottom: 1rem;"></i>
-                        <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.5rem;">Mark Attendance</h3>
-                        <p style="color: var(--text-secondary); font-size: 0.875rem;">Manual attendance entry</p>
+                    <a href="mark-attendance.php" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; text-decoration: none; transition: all 0.2s; cursor: pointer;">
+                        <i class="fas fa-calendar-check" style="font-size: 1rem; color: var(--warning-color);"></i>
+                        <span style="font-size: 0.875rem; font-weight: 500; color: var(--text-primary);">Mark Attendance</span>
                     </a>
                     
-                    <a href="reports.php" class="card" style="text-align: center; padding: 2rem; cursor: pointer;">
-                        <i class="fas fa-chart-bar" style="font-size: 2.5rem; color: var(--danger-color); margin-bottom: 1rem;"></i>
-                        <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.5rem;">View Reports</h3>
-                        <p style="color: var(--text-secondary); font-size: 0.875rem;">Analytics and statistics</p>
+                    <a href="reports.php" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; text-decoration: none; transition: all 0.2s; cursor: pointer;">
+                        <i class="fas fa-chart-bar" style="font-size: 1rem; color: var(--danger-color);"></i>
+                        <span style="font-size: 0.875rem; font-weight: 500; color: var(--text-primary);">View Reports</span>
                     </a>
                 </div>
                 
@@ -330,4 +303,47 @@ $recent_verifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     <script src="../../assets/js/theme.js"></script>
 </body>
+<script>
+// Preserve sidebar scroll position and ensure active item is visible
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.querySelector('.sidebar-nav');
+    const activeItem = document.querySelector('.nav-item.active');
+    
+    if (sidebar && activeItem) {
+        setTimeout(() => {
+            activeItem.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }, 100);
+    }
+    
+    // Universal time update function for navbar and stats cards
+    function updateAllTimeDisplays() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' });
+        
+        // Update navbar time
+        const navbarTime = document.getElementById('navbarTime');
+        const navbarDate = document.getElementById('navbarDate');
+        if (navbarTime && navbarDate) {
+            navbarTime.textContent = timeStr;
+            navbarDate.textContent = dateStr;
+        }
+        
+        // Update stats card time if exists
+        const currentTime = document.getElementById('currentTime');
+        const currentDate = document.getElementById('currentDate');
+        if (currentTime && currentDate) {
+            currentTime.textContent = timeStr;
+            currentDate.textContent = dateStr;
+        }
+    }
+    
+    // Update time every second
+    setInterval(updateAllTimeDisplays, 1000);
+    updateAllTimeDisplays(); // Initial update
+});
+</script>
 </html>

@@ -178,17 +178,7 @@ $all_face_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                     </div>
                     
-                    <div class="stat-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(59, 130, 246, 0.2); padding: 1.25rem; border-radius: 12px;">
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            <div style="width: 50px; height: 50px; border-radius: 12px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-clock" style="font-size: 1.5rem; color: #3b82f6;"></i>
-                            </div>
-                            <div>
-                                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Current Time</p>
-                                <h3 style="font-size: 1.75rem; font-weight: 700; color: #3b82f6;" id="currentTime"><?php echo date('H:i'); ?></h3>
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
                 
                 <!-- Main Face Verification Section -->
@@ -561,12 +551,31 @@ $all_face_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             ];
         }, $all_face_data)); ?>;
         
-        // Update current time
-        setInterval(() => {
+        // Update current time with seconds and date
+        function updateAllTimeDisplays() {
             const now = new Date();
-            document.getElementById('currentTime').textContent = 
-                now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-        }, 1000);
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' });
+            
+            // Update navbar time
+            const navbarTime = document.getElementById('navbarTime');
+            const navbarDate = document.getElementById('navbarDate');
+            if (navbarTime && navbarDate) {
+                navbarTime.textContent = timeStr;
+                navbarDate.textContent = dateStr;
+            }
+            
+            // Update stats card time if exists
+            const currentTime = document.getElementById('currentTime');
+            const currentDate = document.getElementById('currentDate');
+            if (currentTime && currentDate) {
+                currentTime.textContent = timeStr;
+                currentDate.textContent = dateStr;
+            }
+        }
+        
+        setInterval(updateAllTimeDisplays, 1000);
+        updateAllTimeDisplays(); // Initial update
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', async function() {
@@ -1056,4 +1065,20 @@ $all_face_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         window.addEventListener('beforeunload', stopFaceCamera);
     </script>
 </body>
+<script>
+// Preserve sidebar scroll position and ensure active item is visible
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.querySelector('.sidebar-nav');
+    const activeItem = document.querySelector('.nav-item.active');
+    
+    if (sidebar && activeItem) {
+        setTimeout(() => {
+            activeItem.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }, 100);
+    }
+});
+</script>
 </html>
