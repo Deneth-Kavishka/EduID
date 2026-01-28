@@ -35,7 +35,13 @@ $header_default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
 
 <!-- Header Right Section with Profile Dropdown -->
 <div class="header-right">
-    <button class="theme-toggle" id="themeToggleTop" title="Toggle Theme" type="button" onclick="toggleTheme(event)">
+    <!-- Current Time Display - Windows Taskbar Style -->
+    <div class="header-time-display" style="display: flex; flex-direction: column; align-items: flex-end; margin-right: 1rem; line-height: 1.2;">
+        <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-primary);" id="navbarTime"><?php echo date('H:i:s'); ?></span>
+        <span style="font-size: 0.7rem; color: var(--text-secondary);" id="navbarDate"><?php echo date('m/d/Y'); ?></span>
+    </div>
+
+    <button class="theme-toggle" id="themeToggleTop" title="Toggle Theme" type="button">
         <i class="fas fa-moon"></i>
     </button>
     

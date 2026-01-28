@@ -14,16 +14,712 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <style>
+      /* =============================================
+         Landing Page Custom Styles
+         ============================================= */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        overflow-x: hidden;
+      }
+
+      /* Navigation Styles */
+      .landing-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        padding: 1rem 0;
+        transition: all 0.3s ease;
+        background: transparent;
+      }
+
+      .landing-header.scrolled {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        padding: 0.75rem 0;
+      }
+
+      [data-theme="dark"] .landing-header.scrolled {
+        background: rgba(15, 23, 42, 0.95);
+      }
+
+      .landing-nav {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        z-index: 1001;
+      }
+
+      .logo {
+        height: 45px;
+        width: auto;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+      }
+
+      .brand-name {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        letter-spacing: -0.5px;
+      }
+
+      .landing-header.scrolled .brand-name {
+        color: var(--primary-color);
+        text-shadow: none;
+      }
+
+      /* Desktop Navigation Links */
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+      }
+
+      .nav-links a {
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+        font-size: 0.95rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .nav-links a:hover {
+        color: white;
+      }
+
+      .nav-links a::after {
+        content: "";
+        position: absolute;
+        bottom: -4px;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: white;
+        transition: width 0.3s ease;
+      }
+
+      .nav-links a:hover::after {
+        width: 100%;
+      }
+
+      .landing-header.scrolled .nav-links a {
+        color: var(--text-secondary);
+      }
+
+      .landing-header.scrolled .nav-links a:hover {
+        color: var(--primary-color);
+      }
+
+      .landing-header.scrolled .nav-links a::after {
+        background: var(--primary-color);
+      }
+
+      /* Nav Actions */
+      .nav-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        z-index: 1001;
+      }
+
+      .theme-toggle {
+        background: rgba(255, 255, 255, 0.15);
+        border: none;
+        color: white;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+      }
+
+      .theme-toggle:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: scale(1.05);
+      }
+
+      .landing-header.scrolled .theme-toggle {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+      }
+
+      .landing-header.scrolled .theme-toggle:hover {
+        background: var(--bg-hover);
+      }
+
+      .btn-signin {
+        background: white;
+        color: var(--primary-color);
+        padding: 0.7rem 1.75rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+      }
+
+      .btn-signin:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .landing-header.scrolled .btn-signin {
+        background: var(--primary-color);
+        color: white;
+      }
+
+      /* Mobile Menu Toggle */
+      .mobile-toggle {
+        display: none;
+        background: rgba(255, 255, 255, 0.15);
+        border: none;
+        color: white;
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        cursor: pointer;
+        z-index: 1002;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+      }
+
+      .mobile-toggle span {
+        width: 22px;
+        height: 2.5px;
+        background: white;
+        border-radius: 2px;
+        transition: all 0.3s ease;
+      }
+
+      .landing-header.scrolled .mobile-toggle {
+        background: var(--bg-tertiary);
+      }
+
+      .landing-header.scrolled .mobile-toggle span {
+        background: var(--text-primary);
+      }
+
+      .mobile-toggle.active span:nth-child(1) {
+        transform: rotate(45deg) translate(5px, 5px);
+      }
+
+      .mobile-toggle.active span:nth-child(2) {
+        opacity: 0;
+      }
+
+      .mobile-toggle.active span:nth-child(3) {
+        transform: rotate(-45deg) translate(5px, -5px);
+      }
+
+      /* Mobile Menu */
+      .mobile-menu {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          135deg,
+          var(--primary-color) 0%,
+          var(--secondary-color) 100%
+        );
+        z-index: 999;
+        padding: 100px 2rem 2rem;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.4s ease;
+      }
+
+      .mobile-menu.active {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .mobile-menu-content {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+
+      .mobile-menu a {
+        color: white;
+        font-size: 1.25rem;
+        font-weight: 600;
+        text-decoration: none;
+        padding: 1rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        text-align: center;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+      }
+
+      .mobile-menu a:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateX(5px);
+      }
+
+      .mobile-menu .btn-signin-mobile {
+        background: white;
+        color: var(--primary-color);
+        margin-top: 1rem;
+      }
+
+      /* Hero Section */
+      .hero-section {
+        position: relative;
+        min-height: 100vh;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      /* Background Carousel */
+      .hero-carousel {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100%;
+        z-index: 0;
+      }
+
+      .carousel-slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100%;
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out;
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+      }
+
+      .carousel-slide::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          135deg,
+          rgba(15, 23, 42, 0.65) 0%,
+          rgba(30, 41, 59, 0.55) 50%,
+          rgba(51, 65, 85, 0.5) 100%
+        );
+        backdrop-filter: blur(2px);
+      }
+
+      .carousel-slide.active {
+        opacity: 1;
+      }
+
+      /* Hero Content */
+      .hero-content {
+        position: relative;
+        z-index: 10;
+        text-align: center;
+        padding: 4rem 2rem;
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-bottom: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .hero-badge i {
+        color: #fbbf24;
+      }
+
+      .hero-content h1 {
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 900;
+        color: white;
+        margin-bottom: 1.5rem;
+        line-height: 1.1;
+        letter-spacing: -1.5px;
+        text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      }
+
+      .hero-content h1 .highlight {
+        background: linear-gradient(135deg, #fbbf24, #f59e0b, #ec4899);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        position: relative;
+        display: inline-block;
+      }
+
+      .typing-cursor {
+        display: inline-block;
+        width: 3px;
+        height: 0.9em;
+        background: white;
+        margin-left: 4px;
+        animation: blink-cursor 1s step-end infinite;
+        vertical-align: text-bottom;
+      }
+
+      @keyframes blink-cursor {
+        from,
+        to {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+
+      .hero-subtitle {
+        font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+        color: rgba(255, 255, 255, 0.95);
+        margin-bottom: 3rem;
+        line-height: 1.75;
+        max-width: 750px;
+        margin-left: auto;
+        margin-right: auto;
+        font-weight: 400;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        min-height: 65px;
+      }
+
+      /* Hero Buttons */
+      .hero-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 3rem;
+      }
+
+      .hero-buttons .btn {
+        padding: 1.125rem 2.5rem;
+        font-size: 1.05rem;
+        font-weight: 600;
+        border-radius: 50px;
+        text-decoration: none;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        letter-spacing: 0.3px;
+      }
+
+      .hero-buttons .btn-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        border: 2px solid transparent;
+      }
+
+      .hero-buttons .btn-primary:hover {
+        background: linear-gradient(135deg, #764ba2, #667eea);
+        transform: translateY(-3px);
+        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+      }
+
+      .hero-buttons .btn-outline {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(10px);
+      }
+
+      .hero-buttons .btn-outline:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: white;
+        transform: translateY(-3px);
+      }
+
+      /* Hero Stats */
+      .hero-stats {
+        display: flex;
+        justify-content: center;
+        gap: 3rem;
+        flex-wrap: wrap;
+      }
+
+      .hero-stat {
+        text-align: center;
+      }
+
+      .hero-stat-value {
+        font-size: 2.25rem;
+        font-weight: 800;
+        color: white;
+        display: block;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+      }
+
+      .hero-stat-label {
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      /* Carousel Dots */
+      .carousel-dots {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
+        z-index: 20;
+      }
+
+      .carousel-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.4);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+      }
+
+      .carousel-dot:hover {
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .carousel-dot.active {
+        background: white;
+        transform: scale(1.3);
+      }
+
+      /* Scroll Indicator */
+      .scroll-indicator {
+        position: absolute;
+        bottom: 2.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+      }
+
+      .scroll-indicator a {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+      }
+
+      .scroll-indicator a:hover {
+        color: white;
+      }
+
+      .scroll-indicator i {
+        font-size: 1.5rem;
+        animation: bounce 2s infinite;
+      }
+
+      @keyframes bounce {
+        0%,
+        20%,
+        50%,
+        80%,
+        100% {
+          transform: translateX(-50%) translateY(0);
+        }
+        40% {
+          transform: translateX(-50%) translateY(-10px);
+        }
+        60% {
+          transform: translateX(-50%) translateY(-5px);
+        }
+      }
+
+      /* Animations */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(40px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .hero-badge {
+        animation: fadeInUp 0.8s ease forwards;
+        opacity: 0;
+      }
+      .hero-content h1 {
+        animation: fadeInUp 0.8s ease 0.15s forwards;
+        opacity: 0;
+      }
+      .hero-subtitle {
+        animation: fadeInUp 0.8s ease 0.3s forwards;
+        opacity: 0;
+      }
+      .hero-buttons {
+        animation: fadeInUp 0.8s ease 0.45s forwards;
+        opacity: 0;
+      }
+      .hero-stats {
+        animation: fadeInUp 0.8s ease 0.6s forwards;
+        opacity: 0;
+      }
+
+      /* Responsive */
+      @media (max-width: 992px) {
+        .nav-links {
+          display: none;
+        }
+
+        .mobile-toggle {
+          display: flex;
+        }
+
+        .mobile-menu {
+          display: block;
+        }
+
+        .btn-signin {
+          display: none;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .hero-content h1 {
+          font-size: 2.25rem;
+        }
+
+        .hero-subtitle {
+          font-size: 1rem;
+        }
+
+        .hero-buttons {
+          flex-direction: column;
+        }
+
+        .hero-buttons .btn {
+          width: 100%;
+          max-width: 280px;
+          justify-content: center;
+        }
+
+        .hero-stats {
+          gap: 2rem;
+        }
+
+        .hero-stat-value {
+          font-size: 1.5rem;
+        }
+
+        .scroll-indicator {
+          display: none;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .landing-nav {
+          padding: 0 1rem;
+        }
+
+        .brand-name {
+          font-size: 1.5rem;
+        }
+
+        .logo {
+          height: 38px;
+        }
+
+        .hero-content {
+          padding: 1rem;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="landing-page">
       <!-- Header/Navigation -->
-      <header class="landing-header">
+      <header class="landing-header" id="landingHeader">
         <nav class="landing-nav">
           <div class="logo-container">
             <img src="assets/images/logo.svg" alt="EduID Logo" class="logo" />
             <span class="brand-name">EduID</span>
           </div>
+
+          <!-- Desktop Nav Links -->
+          <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#benefits">Benefits</a>
+            <a href="#stats">Statistics</a>
+            <a href="#contact">Contact</a>
+          </div>
+
           <div class="nav-actions">
             <button
               class="theme-toggle"
@@ -32,42 +728,161 @@
             >
               <i class="fas fa-moon"></i>
             </button>
-            <a href="auth/login.php" class="btn-signin">
-              <i class="fas fa-sign-in-alt"></i> Sign In
-            </a>
+            <!-- Mobile Toggle -->
+            <button
+              class="mobile-toggle"
+              id="mobileToggle"
+              aria-label="Toggle menu"
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
           </div>
         </nav>
       </header>
 
+      <!-- Mobile Menu -->
+      <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+          <a href="#features"><i class="fas fa-star"></i> Features</a>
+          <a href="#benefits"><i class="fas fa-check-circle"></i> Benefits</a>
+          <a href="#stats"><i class="fas fa-chart-bar"></i> Statistics</a>
+          <a href="#contact"><i class="fas fa-envelope"></i> Contact</a>
+          <a href="auth/login.php" class="btn-signin-mobile">
+            <i class="fas fa-sign-in-alt"></i> Sign In
+          </a>
+        </div>
+      </div>
+
       <!-- Hero Section -->
       <section class="hero-section">
+        <!-- Background Image Carousel -->
+        <div class="hero-carousel" id="heroCarousel">
+          <div
+            class="carousel-slide active"
+            style="
+              background-image: url(&quot;https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2880&q=85&quot;);
+            "
+          ></div>
+          <div
+            class="carousel-slide"
+            style="
+              background-image: url(&quot;https://images.unsplash.com/photo-1524178232363-1fb2b075b655?ixlib=rb-4.0.3&auto=format&fit=crop&w=2880&q=85&quot;);
+            "
+          ></div>
+          <div
+            class="carousel-slide"
+            style="
+              background-image: url(&quot;https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-4.0.3&auto=format&fit=crop&w=2880&q=85&quot;);
+            "
+          ></div>
+          <div
+            class="carousel-slide"
+            style="
+              background-image: url(&quot;https://images.unsplash.com/photo-1509062522246-3755977927d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=2880&q=85&quot;);
+            "
+          ></div>
+          <div
+            class="carousel-slide"
+            style="
+              background-image: url(&quot;https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=2880&q=85&quot;);
+            "
+          ></div>
+        </div>
+
+        <!-- Hero Content -->
         <div class="hero-content">
-          <h1>Secure & Smart Identity Verification</h1>
-          <p>
-            Modern biometric authentication system for educational institutions.
-            Verify student identity using QR codes and facial recognition for
-            exams, attendance, and campus access.
+          <h1 id="heroTitle">
+            Secure <span class="highlight">Smart</span> Identity
+          </h1>
+          <p class="hero-subtitle" id="heroSubtitle">
+            Modern biometric authentication for educational institutions. Verify
+            student identity using QR codes and facial recognition.
           </p>
           <div class="hero-buttons">
             <a href="auth/login.php" class="btn btn-primary">
               <i class="fas fa-rocket"></i> Get Started
             </a>
             <a href="#features" class="btn btn-outline">
-              <i class="fas fa-info-circle"></i> Learn More
+              <i class="fas fa-play-circle"></i> Learn More
             </a>
           </div>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <span class="hero-stat-value">< 2s</span>
+              <span class="hero-stat-label">Verification Time</span>
+            </div>
+            <div class="hero-stat">
+              <span class="hero-stat-value">99.9%</span>
+              <span class="hero-stat-label">Accuracy Rate</span>
+            </div>
+            <div class="hero-stat">
+              <span class="hero-stat-value">24/7</span>
+              <span class="hero-stat-label">System Uptime</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Carousel Dots -->
+        <div class="carousel-dots" id="carouselDots">
+          <button
+            class="carousel-dot active"
+            data-index="0"
+            aria-label="Slide 1"
+          ></button>
+          <button
+            class="carousel-dot"
+            data-index="1"
+            aria-label="Slide 2"
+          ></button>
+          <button
+            class="carousel-dot"
+            data-index="2"
+            aria-label="Slide 3"
+          ></button>
+          <button
+            class="carousel-dot"
+            data-index="3"
+            aria-label="Slide 4"
+          ></button>
+          <button
+            class="carousel-dot"
+            data-index="4"
+            aria-label="Slide 5"
+          ></button>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div class="scroll-indicator">
+          <a href="#features">
+            <span>Scroll Down</span>
+            <i class="fas fa-chevron-down"></i>
+          </a>
         </div>
       </section>
 
       <!-- Features Section -->
       <section class="features-section" id="features">
         <div class="container">
-          <h2 class="section-title">Powerful Features</h2>
+          <div class="section-header">
+            <span class="section-badge"
+              ><i class="fas fa-star"></i> Features</span
+            >
+            <h2 class="section-title">Powerful Features</h2>
+            <p class="section-subtitle">
+              Everything you need for modern identity verification in
+              educational institutions
+            </p>
+          </div>
           <div class="features-grid">
             <!-- Feature 1: Face Recognition -->
             <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-face-smile" style="color: #3b82f6"></i>
+              <div
+                class="feature-icon"
+                style="background: linear-gradient(135deg, #3b82f6, #1d4ed8)"
+              >
+                <i class="fas fa-face-smile"></i>
               </div>
               <h3>Face Recognition</h3>
               <p>
@@ -78,8 +893,11 @@
 
             <!-- Feature 2: QR Code System -->
             <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-qrcode" style="color: #10b981"></i>
+              <div
+                class="feature-icon"
+                style="background: linear-gradient(135deg, #10b981, #059669)"
+              >
+                <i class="fas fa-qrcode"></i>
               </div>
               <h3>QR Code Generation</h3>
               <p>
@@ -90,8 +908,11 @@
 
             <!-- Feature 3: Attendance Tracking -->
             <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-calendar-check" style="color: #f59e0b"></i>
+              <div
+                class="feature-icon"
+                style="background: linear-gradient(135deg, #f59e0b, #d97706)"
+              >
+                <i class="fas fa-calendar-check"></i>
               </div>
               <h3>Smart Attendance</h3>
               <p>
@@ -102,8 +923,11 @@
 
             <!-- Feature 4: Exam Hall Management -->
             <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-clipboard-list" style="color: #ef4444"></i>
+              <div
+                class="feature-icon"
+                style="background: linear-gradient(135deg, #ef4444, #dc2626)"
+              >
+                <i class="fas fa-clipboard-list"></i>
               </div>
               <h3>Exam Management</h3>
               <p>
@@ -114,8 +938,11 @@
 
             <!-- Feature 5: Multi-Portal Access -->
             <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-users-gear" style="color: #7c3aed"></i>
+              <div
+                class="feature-icon"
+                style="background: linear-gradient(135deg, #7c3aed, #6d28d9)"
+              >
+                <i class="fas fa-users-gear"></i>
               </div>
               <h3>Multi-User Portals</h3>
               <p>
@@ -126,8 +953,11 @@
 
             <!-- Feature 6: Real-time Analytics -->
             <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-chart-line" style="color: #06b6d4"></i>
+              <div
+                class="feature-icon"
+                style="background: linear-gradient(135deg, #06b6d4, #0891b2)"
+              >
+                <i class="fas fa-chart-line"></i>
               </div>
               <h3>Analytics & Reports</h3>
               <p>
@@ -135,168 +965,688 @@
                 reports for data-driven decision making.
               </p>
             </div>
-
-            <!-- Feature 7: Event Management -->
-            <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-calendar-days" style="color: #ec4899"></i>
-              </div>
-              <h3>Event Control</h3>
-              <p>
-                Manage campus events with registration tracking and automated
-                check-in for better crowd control.
-              </p>
-            </div>
-
-            <!-- Feature 8: Security -->
-            <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-shield-halved" style="color: #8b5cf6"></i>
-              </div>
-              <h3>Enhanced Security</h3>
-              <p>
-                Bank-level encryption, secure data storage, and audit trails
-                ensure maximum protection of sensitive information.
-              </p>
-            </div>
-
-            <!-- Feature 9: Dark Mode -->
-            <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-moon" style="color: #64748b"></i>
-              </div>
-              <h3>Light & Dark Mode</h3>
-              <p>
-                Comfortable viewing experience with seamless theme switching for
-                day and night usage.
-              </p>
-            </div>
           </div>
         </div>
       </section>
 
       <!-- Benefits Section -->
-      <section class="features-section" style="background: var(--bg-secondary)">
+      <section class="features-section benefits-section" id="benefits">
         <div class="container">
-          <h2 class="section-title">Why Choose EduID?</h2>
-          <div class="features-grid">
-            <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-rocket" style="color: #3b82f6"></i>
+          <div class="section-header">
+            <span class="section-badge"
+              ><i class="fas fa-check-circle"></i> Benefits</span
+            >
+            <h2 class="section-title">Why Choose EduID?</h2>
+            <p class="section-subtitle">
+              Experience the advantages of modern identity verification
+            </p>
+          </div>
+          <div class="benefits-grid">
+            <div class="benefit-card">
+              <div class="benefit-icon">
+                <i class="fas fa-rocket"></i>
               </div>
-              <h3>Fast & Efficient</h3>
-              <p>
-                Reduce verification time by 80% with instant biometric
-                authentication and QR scanning.
-              </p>
+              <div class="benefit-content">
+                <h3>Fast & Efficient</h3>
+                <p>
+                  Reduce verification time by 80% with instant biometric
+                  authentication and QR scanning.
+                </p>
+              </div>
             </div>
-            <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-lock" style="color: #10b981"></i>
+            <div class="benefit-card">
+              <div class="benefit-icon">
+                <i class="fas fa-lock"></i>
               </div>
-              <h3>Prevent Fraud</h3>
-              <p>
-                Eliminate fake IDs and impersonation with dual-layer
-                verification system.
-              </p>
+              <div class="benefit-content">
+                <h3>Prevent Fraud</h3>
+                <p>
+                  Eliminate fake IDs and impersonation with dual-layer
+                  verification system.
+                </p>
+              </div>
             </div>
-            <div class="feature-card">
-              <div class="feature-icon">
-                <i class="fas fa-mobile-screen" style="color: #f59e0b"></i>
+            <div class="benefit-card">
+              <div class="benefit-icon">
+                <i class="fas fa-mobile-screen"></i>
               </div>
-              <h3>Easy to Use</h3>
-              <p>
-                Intuitive interface designed for quick adoption by all users
-                without technical training.
-              </p>
+              <div class="benefit-content">
+                <h3>Easy to Use</h3>
+                <p>
+                  Intuitive interface designed for quick adoption by all users
+                  without training.
+                </p>
+              </div>
+            </div>
+            <div class="benefit-card">
+              <div class="benefit-icon">
+                <i class="fas fa-shield-halved"></i>
+              </div>
+              <div class="benefit-content">
+                <h3>Secure & Private</h3>
+                <p>
+                  Bank-level encryption and secure data storage for maximum
+                  protection.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <!-- Stats Section -->
-      <section class="features-section">
+      <section class="stats-section" id="stats">
         <div class="container">
           <div class="stats-grid">
             <div class="stat-card">
-              <div class="stat-icon primary">
+              <div class="stat-icon">
                 <i class="fas fa-clock"></i>
               </div>
-              <div class="stat-details">
-                <h3>< 2 Sec</h3>
-                <p>Average verification time</p>
-              </div>
+              <h3>< 2 Sec</h3>
+              <p>Average verification time</p>
             </div>
             <div class="stat-card">
-              <div class="stat-icon success">
+              <div class="stat-icon">
                 <i class="fas fa-percentage"></i>
               </div>
-              <div class="stat-details">
-                <h3>99.9%</h3>
-                <p>Accuracy rate</p>
-              </div>
+              <h3>99.9%</h3>
+              <p>Accuracy rate</p>
             </div>
             <div class="stat-card">
-              <div class="stat-icon warning">
+              <div class="stat-icon">
                 <i class="fas fa-shield-halved"></i>
               </div>
-              <div class="stat-details">
-                <h3>100%</h3>
-                <p>Secure & Encrypted</p>
-              </div>
+              <h3>100%</h3>
+              <p>Secure & Encrypted</p>
             </div>
             <div class="stat-card">
-              <div class="stat-icon danger">
+              <div class="stat-icon">
                 <i class="fas fa-users"></i>
               </div>
-              <div class="stat-details">
-                <h3>Unlimited</h3>
-                <p>User capacity</p>
-              </div>
+              <h3>Unlimited</h3>
             </div>
           </div>
         </div>
       </section>
 
       <!-- CTA Section -->
-      <section class="hero-section" style="padding: 4rem 2rem">
-        <div class="hero-content">
-          <h2 style="font-size: 2.5rem; margin-bottom: 1rem">
-            Ready to Transform Your Institution?
-          </h2>
-          <p style="margin-bottom: 2rem">
-            Join modern educational institutions using EduID for secure identity
-            management
-          </p>
-          <a
-            href="auth/login.php"
-            class="btn btn-primary"
-            style="font-size: 1.2rem"
-          >
-            <i class="fas fa-arrow-right"></i> Start Now
-          </a>
+      <section class="cta-section" id="contact">
+        <div class="container">
+          <div class="cta-content">
+            <h2>Ready to Transform Your Institution?</h2>
+            <p>
+              Join modern educational institutions using EduID for secure
+              identity management
+            </p>
+            <a href="auth/login.php" class="btn btn-cta">
+              <i class="fas fa-arrow-right"></i> Get Started Now
+            </a>
+          </div>
         </div>
       </section>
 
       <!-- Footer -->
-      <footer
-        style="
-          background: rgba(0, 0, 0, 0.2);
-          color: white;
-          text-align: center;
-          padding: 2rem;
-        "
-      >
-        <p>
-          &copy; 2026 EduID - Educational Identity Verification System. All
-          rights reserved.
-        </p>
-        <p style="margin-top: 0.5rem; opacity: 0.8">
-          Powered by Advanced Biometric Technology
-        </p>
+      <footer class="landing-footer">
+        <div class="container">
+          <div class="footer-content">
+            <div class="footer-brand">
+              <img
+                src="assets/images/logo.svg"
+                alt="EduID Logo"
+                class="footer-logo"
+              />
+              <span>EduID</span>
+            </div>
+            <p class="footer-text">
+              &copy; 2026 EduID - Educational Identity Verification System. All
+              rights reserved.
+            </p>
+            <div class="footer-links">
+              <a href="#features">Features</a>
+              <a href="#benefits">Benefits</a>
+              <a href="auth/login.php">Sign In</a>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
 
     <script src="assets/js/theme.js"></script>
+    <script>
+      // Mobile Menu Toggle
+      (function () {
+        const mobileToggle = document.getElementById("mobileToggle");
+        const mobileMenu = document.getElementById("mobileMenu");
+        const mobileMenuLinks = document.querySelectorAll(".mobile-menu a");
+
+        if (mobileToggle && mobileMenu) {
+          mobileToggle.addEventListener("click", function () {
+            this.classList.toggle("active");
+            mobileMenu.classList.toggle("active");
+            document.body.style.overflow = mobileMenu.classList.contains(
+              "active",
+            )
+              ? "hidden"
+              : "";
+          });
+
+          // Close menu when clicking links
+          mobileMenuLinks.forEach((link) => {
+            link.addEventListener("click", function () {
+              mobileToggle.classList.remove("active");
+              mobileMenu.classList.remove("active");
+              document.body.style.overflow = "";
+            });
+          });
+
+          // Close menu on escape key
+          document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && mobileMenu.classList.contains("active")) {
+              mobileToggle.classList.remove("active");
+              mobileMenu.classList.remove("active");
+              document.body.style.overflow = "";
+            }
+          });
+        }
+      })();
+
+      // Header scroll effect
+      (function () {
+        const header = document.getElementById("landingHeader");
+
+        window.addEventListener("scroll", function () {
+          if (window.scrollY > 50) {
+            header.classList.add("scrolled");
+          } else {
+            header.classList.remove("scrolled");
+          }
+        });
+      })();
+
+      // Hero Carousel
+      (function () {
+        const slides = document.querySelectorAll(".carousel-slide");
+        const dots = document.querySelectorAll(".carousel-dot");
+        let currentSlide = 0;
+        let carouselInterval;
+
+        function showSlide(index) {
+          slides.forEach((slide) => slide.classList.remove("active"));
+          dots.forEach((dot) => dot.classList.remove("active"));
+
+          currentSlide = index;
+          if (currentSlide >= slides.length) currentSlide = 0;
+          if (currentSlide < 0) currentSlide = slides.length - 1;
+
+          slides[currentSlide].classList.add("active");
+          dots[currentSlide].classList.add("active");
+        }
+
+        function nextSlide() {
+          showSlide(currentSlide + 1);
+        }
+
+        function startCarousel() {
+          carouselInterval = setInterval(nextSlide, 4000);
+        }
+
+        dots.forEach((dot, index) => {
+          dot.addEventListener("click", () => {
+            clearInterval(carouselInterval);
+            showSlide(index);
+            startCarousel();
+          });
+        });
+
+        startCarousel();
+      })();
+
+      // Typing Effect
+      (function () {
+        const titles = [
+          'Secure <span class="highlight">Smart</span> Identity',
+          '<span class="highlight">Advanced</span> Face Recognition',
+          'Modern <span class="highlight">Educational</span> Tech',
+          'Seamless <span class="highlight">Attendance</span> System',
+        ];
+
+        const subtitles = [
+          "Modern biometric authentication for educational institutions. Verify student identity using QR codes and facial recognition.",
+          "AI-powered facial recognition ensures accurate student identification in real-time with 99.9% accuracy.",
+          "Transform your institution with cutting-edge identity verification technology designed for education.",
+          "Automated attendance tracking with real-time updates and comprehensive reports for everyone.",
+        ];
+
+        const titleElement = document.getElementById("heroTitle");
+        const subtitleElement = document.getElementById("heroSubtitle");
+
+        let currentIndex = 0;
+
+        function changeText() {
+          titleElement.style.opacity = "0";
+          subtitleElement.style.opacity = "0";
+
+          setTimeout(() => {
+            titleElement.innerHTML = titles[currentIndex];
+            subtitleElement.textContent = subtitles[currentIndex];
+
+            titleElement.style.opacity = "1";
+            subtitleElement.style.opacity = "1";
+
+            currentIndex = (currentIndex + 1) % titles.length;
+          }, 500);
+        }
+
+        // Initial display
+        titleElement.innerHTML = titles[0];
+        subtitleElement.textContent = subtitles[0];
+        titleElement.style.transition = "opacity 0.5s ease";
+        subtitleElement.style.transition = "opacity 0.5s ease";
+
+        // Change text every 5 seconds
+        setInterval(changeText, 5000);
+      })();
+
+      // Smooth scroll for anchor links
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener("click", function (e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute("href"));
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
+      });
+    </script>
+
+    <style>
+      /* Additional Section Styles */
+      .section-header {
+        text-align: center;
+        margin-bottom: 4rem;
+      }
+
+      .section-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: linear-gradient(
+          135deg,
+          var(--primary-color),
+          var(--secondary-color)
+        );
+        color: white;
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+
+      .section-subtitle {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      /* Enhanced Feature Cards */
+      .feature-card {
+        background: var(--bg-primary);
+        padding: 2rem;
+        border-radius: 16px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 1px solid var(--border-color);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .feature-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(
+          135deg,
+          var(--primary-color),
+          var(--secondary-color)
+        );
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+      }
+
+      .feature-card:hover::before {
+        transform: scaleX(1);
+      }
+
+      .feature-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      }
+
+      .feature-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        font-size: 1.75rem;
+        color: white;
+      }
+
+      .feature-card h3 {
+        font-size: 1.25rem;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+      }
+
+      .feature-card p {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        font-size: 0.95rem;
+      }
+
+      /* Benefits Section */
+      .benefits-section {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .benefits-section::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #1e1b4b, #312e81, #4c1d95, #581c87);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
+        z-index: 0;
+      }
+
+      .benefits-section .container {
+        position: relative;
+        z-index: 1;
+      }
+
+      @keyframes gradientShift {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+
+      .benefits-section .section-badge {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+      }
+
+      .benefits-section .section-title {
+        color: white;
+      }
+
+      .benefits-section .section-subtitle {
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .benefits-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+      }
+
+      @media (max-width: 1200px) {
+        .benefits-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .benefits-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .benefit-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 2rem;
+        border-radius: 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 1.25rem;
+        transition: all 0.3s ease;
+      }
+
+      .benefit-card:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateY(-5px);
+      }
+
+      .benefit-icon {
+        width: 50px;
+        height: 50px;
+        background: white;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: var(--primary-color);
+        flex-shrink: 0;
+      }
+
+      .benefit-content h3 {
+        color: white;
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .benefit-content p {
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+
+      /* Stats Section */
+      .stats-section {
+        padding: 5rem 2rem;
+        background: var(--bg-primary);
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+      }
+
+      .stat-card {
+        text-align: center;
+        padding: 2rem;
+        background: var(--bg-secondary);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .stat-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(
+          135deg,
+          var(--primary-color),
+          var(--secondary-color)
+        );
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.5rem;
+        color: white;
+      }
+
+      .stat-card h3 {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+      }
+
+      .stat-card p {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+      }
+
+      /* CTA Section */
+      .cta-section {
+        padding: 6rem 2rem;
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+      }
+
+      .cta-section::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #1e1b4b, #312e81, #4c1d95, #581c87);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
+        z-index: 0;
+      }
+
+      .cta-section .container {
+        position: relative;
+        z-index: 1;
+      }
+
+      .cta-content h2 {
+        font-size: clamp(1.75rem, 4vw, 2.5rem);
+        color: white;
+        margin-bottom: 1rem;
+      }
+
+      .cta-content p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .btn-cta {
+        background: white;
+        color: var(--primary-color);
+        padding: 1rem 2.5rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn-cta:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+      }
+
+      /* Footer */
+      .landing-footer {
+        background: var(--bg-primary);
+        padding: 2rem;
+        border-top: 1px solid var(--border-color);
+      }
+
+      .footer-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        text-align: center;
+      }
+
+      .footer-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .footer-logo {
+        height: 35px;
+      }
+
+      .footer-brand span {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .footer-text {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+      }
+
+      .footer-links {
+        display: flex;
+        gap: 1.5rem;
+      }
+
+      .footer-links a {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: color 0.3s ease;
+      }
+
+      .footer-links a:hover {
+        color: var(--primary-color);
+      }
+
+      @media (max-width: 768px) {
+        .benefits-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .benefit-card {
+          flex-direction: column;
+          text-align: center;
+        }
+
+        .benefit-icon {
+          margin: 0 auto;
+        }
+
+        .footer-links {
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+      }
+    </style>
   </body>
 </html>

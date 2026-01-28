@@ -208,11 +208,29 @@
     });
     
     function toggleThemeDropdown() {
+        // Use the global toggleTheme function if available (from theme.js)
+        if (typeof toggleTheme === 'function') {
+            toggleTheme();
+            // Update local UI elements
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            const indicator = document.getElementById('themeIndicator');
+            if (indicator) {
+                indicator.textContent = currentTheme === 'dark' ? 'On' : 'Off';
+            }
+            const dropdownIcon = document.getElementById('dropdownThemeIcon');
+            if (dropdownIcon) {
+                dropdownIcon.className = currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+            return;
+        }
+        
+        // Fallback if theme.js is not loaded
         const html = document.documentElement;
         const currentTheme = html.getAttribute('data-theme');
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         
         html.setAttribute('data-theme', newTheme);
+        document.body.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
         
         const indicator = document.getElementById('themeIndicator');
@@ -242,6 +260,20 @@
         const dropdownIcon = document.getElementById('dropdownThemeIcon');
         if (dropdownIcon) {
             dropdownIcon.className = currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+        
+        // Add click event listener to theme toggle button
+        const themeToggleBtn = document.getElementById('themeToggleTop');
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof toggleTheme === 'function') {
+                    toggleTheme(e);
+                } else {
+                    toggleThemeDropdown();
+                }
+            });
         }
     });
 </script>

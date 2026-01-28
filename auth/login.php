@@ -181,17 +181,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
             
             <div style="margin-top: 1.5rem; text-align: center;">
-                <button class="theme-toggle" id="themeToggle" style="margin: 0 auto;">
-                    <i class="fas fa-moon"></i>
-                </button>
-            </div>
-            
-            <div style="margin-top: 1rem; text-align: center; color: var(--text-secondary); font-size: 0.875rem;">
-                <p>Demo Credentials:</p>
-                <p><strong>Admin:</strong> admin / Admin@123</p>
-            </div>
-            
-            <div style="margin-top: 1.5rem; text-align: center;">
                 <a href="../index.html" style="color: var(--text-secondary); font-size: 0.875rem;">
                     <i class="fas fa-arrow-left"></i> Back to Home
                 </a>

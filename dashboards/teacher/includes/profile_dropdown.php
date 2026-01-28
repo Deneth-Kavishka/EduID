@@ -49,7 +49,7 @@ $header_default_avatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
     <span style="font-size: 0.7rem; color: var(--text-secondary);" id="navbarDate"><?php echo date('m/d/Y'); ?></span>
 </div>
 
-<button class="theme-toggle" id="themeToggleTop" title="Toggle Theme" type="button" onclick="toggleTheme(event)">
+<button class="theme-toggle" id="themeToggleTop" title="Toggle Theme" type="button">
     <i class="fas fa-moon"></i>
 </button>
 

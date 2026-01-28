@@ -1313,6 +1313,22 @@ $admin = $stmt->fetch(PDO::FETCH_ASSOC);
                 document.body.style.overflow = '';
             }
         });
+        
+        // Update time display
+        function updateTime() {
+            const now = new Date();
+            const timeElement = document.getElementById('navbarTime');
+            const dateElement = document.getElementById('navbarDate');
+            
+            if (timeElement && dateElement) {
+                timeElement.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+                dateElement.textContent = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+            }
+        }
+        
+        // Update time every second
+        setInterval(updateTime, 1000);
+        updateTime();
     </script>
 </body>
 </html>
